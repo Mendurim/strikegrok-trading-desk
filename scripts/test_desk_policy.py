@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import importlib
 import io
 import json
 import os
@@ -1174,6 +1175,50 @@ class TestVerifyReporting(unittest.TestCase):
         _, text = self.run_verify()
         for name in desk_policy.effective_ceilings():
             self.assertIn(name, text)
+
+
+class TestExplainCommand(unittest.TestCase):
+    """`explain` is the dry run SETUP tells a user to reach for. It has to answer
+    the question they asked, not report that the day has not been opened."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        for name in ("STRIKEGROK_STATE_TRUSTED", "STRIKEGROK_POLICY_STATE", "STRIKEGROK_DESK"):
+            os.environ.pop(name, None)
+        os.environ["STRIKEGROK_DESK"] = self._tmp.name
+        self.addCleanup(lambda: os.environ.pop("STRIKEGROK_DESK", None))
+        importlib.reload(desk_policy)
+        self.addCleanup(lambda: importlib.reload(desk_policy))
+        self.desk = Desk(self._tmp.name, signed=False)
+        self.desk.proposal(blocks=[
+            (f"RISK | SG-20260912-03 | PASS | {utc()}", Desk.fields(sa=None))])
+        self.body = os.path.join(self._tmp.name, "body.json")
+        with open(self.body, "w", encoding="utf-8") as handle:
+            json.dump(Desk.body(), handle)
+
+    def run_explain(self, *extra):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = desk_policy.main(["explain", self.body, "--path", "/v2/order/strategy",
+                                     "--equity", "10412.60", *extra])
+        return code, out.getvalue()
+
+    def test_a_dry_run_opens_the_day_for_itself(self):
+        code, text = self.run_explain()
+        self.assertNotIn("no start-of-day equity", text)
+        self.assertEqual(code, 0, text)
+
+    def test_it_reports_the_tier_it_would_allow(self):
+        _, text = self.run_explain()
+        self.assertIn("attended", text)
+
+    def test_a_refusal_names_the_step_and_exits_two(self):
+        with open(self.body, "w", encoding="utf-8") as handle:
+            json.dump(Desk.body(size="9.9"), handle)
+        code, text = self.run_explain()
+        self.assertEqual(code, 2)
+        self.assertIn("REFUSE", text)
 
 
 class TestBlackouts(PolicyCase):
