@@ -114,6 +114,20 @@ class CliTest(unittest.TestCase):
         self.assertNotIn("testnet", sr.MAINNET)
 
 
+class TheUserAgentNamesThisRelease(unittest.TestCase):
+    """A User-Agent naming a version the desk stopped being is a support question
+    nobody can answer from the venue's logs."""
+
+    def test_the_version_matches_plugin_json(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, "plugin.json"), encoding="utf-8") as handle:
+            declared = json.load(handle)["version"]
+        self.assertEqual(sr.VERSION, declared)
+
+    def test_the_header_carries_it(self):
+        self.assertEqual(sr.USER_AGENT, f"strikegrok-desk/{sr.VERSION}")
+
+
 class TheGateRunsBeforeTheSigner(unittest.TestCase):
     """A refused request must never reach the network or the signing key.
 

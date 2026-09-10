@@ -3,7 +3,7 @@ name: strikegrok-bootstrap
 description: Build and verify a StrikeGrok trading desk from the pinned public release. Use for first-run setup, repair, or a readiness check. Starts with a live zero-key Opening Bell on Strike's public Price Service, installs the seven role profiles and nineteen shared skills, prepares the Trading Floor, provisions the Strike API wallet only when the user asks to trade, and returns an evidence receipt. Read-only by default; never requests a key or places an order.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "3.0.1"
   author: Mendurim
   category: desk
 ---
@@ -29,7 +29,7 @@ If `/workspace/strikegrok` is already a Git checkout, read its `plugin.json` and
 
 ```bash
 mkdir -p /workspace && cd /workspace
-git clone --depth 1 --branch v3.0.0 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
+git clone --depth 1 --branch v3.0.1 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
 cd /workspace/strikegrok
 git rev-parse HEAD
 bash scripts/check.sh

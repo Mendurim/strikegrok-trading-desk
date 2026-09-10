@@ -14,7 +14,7 @@ Market data comes from Strike's **public REST Price Service**; execution goes th
 
 Open Grok Bot and paste this to any Bot:
 
-> Set up the StrikeGrok trading desk from https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.0/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.0/SETUP.md for the complete runbook, and finish with its evidence receipt.
+> Set up the StrikeGrok trading desk from https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.1/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.1/SETUP.md for the complete runbook, and finish with its evidence receipt.
 
 The desk starts in research mode. The first demo uses only Strike's public Price Service: no token, no account read, no order. Connect the MCP when you are ready to trade.
 
