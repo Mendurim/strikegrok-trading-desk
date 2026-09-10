@@ -41,12 +41,12 @@ bash scripts/check.sh
 ## 3. Create the repository and tag the release
 
 ```bash
-git add -A && git commit -m "StrikeGrok v2.0.0"
+git add -A && git commit -m "StrikeGrok v3.0.0"
 gh repo create "$GH_OWNER/strikegrok-trading-desk" --public --source=. --push
-git tag -a v2.0.0 -m "StrikeGrok v2.0.0" && git push --tags
+git tag -a v3.0.0 -m "StrikeGrok v3.0.0" && git push --tags
 ```
 
-The tag matters. The bootstrap skill clones `--branch v2.0.0`, so the desk your
+The tag matters. The bootstrap skill clones `--branch v3.0.0`, so the desk your
 Bots build is the desk you reviewed, not whatever `main` happens to hold. When
 you change anything, bump the version in all six manifests, re-hash the
 template, and cut a new tag - `scripts/validate.py` fails the build if a
@@ -57,9 +57,9 @@ document names a release the manifests do not declare.
 Paste this to any Bot:
 
 > Set up the StrikeGrok trading desk from
-> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v2.0.0/skills/strikegrok-bootstrap/SKILL.md`.
+> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.0/skills/strikegrok-bootstrap/SKILL.md`.
 > Follow the bootstrap skill, use
-> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v2.0.0/SETUP.md` for the
+> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.0/SETUP.md` for the
 > complete runbook, and finish with its evidence receipt.
 
 The desk builds itself research-only: no token, no MCP write tool, no order.

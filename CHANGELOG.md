@@ -2,6 +2,31 @@
 
 All notable changes to StrikeGrok are recorded here. Versions follow the release tags the bootstrap skill pins.
 
+## v3.0.0
+
+The desk can now run unattended, and the control that lets it is enforced in code rather than in a prompt.
+
+Every earlier version approved each trade by hand. That is the right control for a discretionary idea and the wrong one for a frozen rule that fires at 03:00 UTC. This release moves the approval from the trade to the rule, and moves the gate from the conversation into `scripts/strike_request.py`, which is the one thing that holds the API wallet.
+
+- `scripts/desk_policy.py` runs on every non-GET before it is signed. Three tiers: reduce-only and cancels are free, opening exposure needs either a standing approval in a register the user signed with a key that never touches the desk computer, or a signed per-trade token. It refuses anything else and names the step that failed.
+- `scripts/test_desk_policy.py` builds a whole desk per test - a real key pair, a genuinely signed register, a state directory - and asserts each refusal. One class runs the PASS template out of `agents/risk-manager.md` through the policy, so the prompt and the code cannot drift apart without the build failing. Another forks six processes at one free slot.
+- Two new skills: `desk-signal-scan`, how the desk finds and times opportunities without being asked, and `desk-standing-approvals`, the approval model and what the layer checks.
+- All seven role prompts rewritten around the scan, the signals file and the standing-approval register.
+
+What the layer will not let through, each because it was demonstrated first:
+
+- an opening order with no stop, a stop on the wrong side of the entry, or a stop that loses more than the ticket's stated risk
+- a ticket whose bytes differ from the Risk PASS block that approved it, or whose fields come from a rejected amendment elsewhere in the file
+- a client order id the desk or the venue has already seen, which is what makes a resend after a timeout impossible rather than merely discouraged
+- a second order under a standing approval that already has exposure or a working order on that market, including when two Bots ask at the same instant
+- opening exposure past the daily loss stop, inside an open incident, inside a blackout window the Research Analyst wrote from the calendar, or more often than once a minute
+- removing margin, or changing leverage on a live position, both of which move the liquidation price and are not configuration
+- more than three open positions across the account, which no approval raises
+
+Being honest about the limit: on a box where the Bots run as the same OS user as the signer, the state directory is bookkeeping rather than a boundary. Anything the state could lie about is therefore asked of the venue instead, and Tier 1 refuses outright unless the operator sets `STRIKEGROK_STATE_TRUSTED=1` to assert that the split is real. Without it, keep the platform's Require Approval rule on and trade at Tier 2.
+
+The desk still ships no strategies and makes no return claims. None of this creates an edge; it decides when the user's own tested rules are allowed to act on one.
+
 ## v2.0.0
 
 Every file in this repository is now original work, and `LICENSE` carries a single copyright.

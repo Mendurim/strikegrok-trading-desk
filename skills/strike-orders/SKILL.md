@@ -3,7 +3,7 @@ name: strike-orders
 description: Placing, protecting and cancelling Strike Finance orders through the signed REST API - limit, market with a slippage bound, bracket strategy orders with attached take-profit and stop-loss, standalone triggers, trailing stops, replace, cancel, client order ids, rounding, and reading the order back from the exchange. Use when executing an approved ticket, attaching protection to a position, or amending a resting order. Write paths - Execution Trader only, after a Risk PASS and the user's approval by ticket id.
 license: MIT
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
   author: Mendurim
   category: strike
   network-default: mainnet
