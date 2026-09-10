@@ -8,7 +8,7 @@ If your runtime loaded this repository as a plugin, invoke `strikegrok-bootstrap
 
 ```bash
 mkdir -p /workspace && cd /workspace
-git clone --depth 1 --branch v1.0.1 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
+git clone --depth 1 --branch v1.1.0 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
 cd /workspace/strikegrok && git rev-parse HEAD && bash scripts/check.sh
 ```
 

@@ -3,15 +3,15 @@
   "status": "ready-to-publish",
   "name": "StrikeGrok Desk Lead",
   "title": "Seven-agent Strike Finance trading desk",
-  "description": "Builds and verifies a seven-agent Strike Finance trading desk from the reviewed StrikeGrok v1.0.1 release. Starts research-only on public market data: no token, no account read, no order.",
+  "description": "Builds and verifies a seven-agent Strike Finance trading desk from the reviewed StrikeGrok v1.1.0 release. Starts research-only on public market data: no token, no account read, no order.",
   "author": "Mendurim",
   "avatar": "assets/mascot.jpg",
   "startMessage": "Start the desk.",
   "source": {
     "repository": "https://github.com/Mendurim/strikegrok-trading-desk",
-    "release": "v1.0.1",
-    "bootstrap": "https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.0.1/skills/strikegrok-bootstrap/SKILL.md",
-    "runbook": "https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.0.1/SETUP.md"
+    "release": "v1.1.0",
+    "bootstrap": "https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.1.0/skills/strikegrok-bootstrap/SKILL.md",
+    "runbook": "https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.1.0/SETUP.md"
   },
   "skills": [
     {
@@ -22,37 +22,37 @@
     {
       "name": "desk-incident-response",
       "path": "skills/desk-incident-response/SKILL.md",
-      "sha256": "666cb0b273957ea178c0955341d5649d438dcac35e1008d2e0d09a20741ad779"
+      "sha256": "83828b2ca42e28be764d817c1f752c9064e4b361bab8e39cafb2c3dbf211aad1"
     },
     {
       "name": "desk-monitoring",
       "path": "skills/desk-monitoring/SKILL.md",
-      "sha256": "dcdcc76b5b3f78cd14a1c7726e5b52707c2b4bf26da49646db896a831a037b36"
+      "sha256": "5b2dcc92a2d3ef6ea32593a9008bd7e69741b474de06406079f5f6d218f88374"
     },
     {
       "name": "desk-operating-model",
       "path": "skills/desk-operating-model/SKILL.md",
-      "sha256": "80c18968f9743847563bd362d9494a596e52bb2157af61ba815e54dbe2d8f5cc"
+      "sha256": "9b28866f08aa9d4f2987689fe2409093ebf3671b6b7d3d794b5c05c8e554c55c"
     },
     {
       "name": "desk-post-trade-review",
       "path": "skills/desk-post-trade-review/SKILL.md",
-      "sha256": "b932e513c8ab0611e458a97b63919db29e8ef28c67caf49186dbc8cb8acbeaeb"
+      "sha256": "6e7c1332ecebc098c8ce475e07b6b78b7134baf729e3452ee5666dd2a80b8f80"
     },
     {
       "name": "desk-risk-limits",
       "path": "skills/desk-risk-limits/SKILL.md",
-      "sha256": "f6da0ddb2add023bb615d06467f499f568ff8f32bac6319ad68361f8aa3f5da4"
+      "sha256": "29f74a77d7c7750cc792d565ef79b1acb4bd63259ea289f9bf4dcb568a6c957b"
     },
     {
       "name": "desk-strategy-lab",
       "path": "skills/desk-strategy-lab/SKILL.md",
-      "sha256": "f03a64fbd882929bee0b69c9c22cd99fff63483488269ac24727507ab5ad9849"
+      "sha256": "249f001fb28cbc5aba0bb6cffbcae9652b597dad32503cee80db327b5916a0d8"
     },
     {
       "name": "desk-trade-lifecycle",
       "path": "skills/desk-trade-lifecycle/SKILL.md",
-      "sha256": "7396772056465dcc47ceb5094d4a2269d86a9b4b37973a8df3cd4c130b709487"
+      "sha256": "dd93997f48d8a314b429684b195f34b7d7bbb1cb2ac9ac0efd112fbae74b72a7"
     },
     {
       "name": "strike-account",
@@ -107,7 +107,7 @@
     {
       "name": "strikegrok-bootstrap",
       "path": "skills/strikegrok-bootstrap/SKILL.md",
-      "sha256": "274fbbd382da66943ff35e5df8538ecabd0314953953fd35eeabaa4d21aaf827"
+      "sha256": "46c818571a253c71b207228c1f1697255fea92ea0c306ffc121fb9ac2c6ef742"
     }
   ],
   "plugins": [],

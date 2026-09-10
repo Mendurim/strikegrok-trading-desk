@@ -1,32 +1,34 @@
 ---
 name: desk-trade-lifecycle
-description: The end-to-end procedure for one trade on the StrikeGrok desk - from an idea to a reviewed, journaled result - with the ticket format, who owns each stage, and what "done" looks like. Use whenever the user wants to open, adjust or close a position, or whenever any Bot is about to touch the exchange write path.
+description: How one trade travels the StrikeGrok desk from first idea to written review - the seven stages, who owns each, the proposal file, the ticket format, what counts as approval, and when a proposal is live, closed or void. Use whenever the user wants to open, adjust or close a position, and whenever any Bot is about to write to the exchange.
 license: MIT
 metadata:
-  version: "1.1.1"
+  version: "3.0.0"
   author: Mendurim
   category: desk
 ---
 
 # Trade lifecycle
 
-Every position change on the desk goes through the same seven stages, in order. Skipping one is a defect, not a shortcut. The Desk Lead keeps the lifecycle moving; the owner of each stage does the work.
+Every change to a position travels the same seven stages in the same order. Missing one is a defect, not a shortcut — the stages exist because each catches something the others do not. The Desk Lead keeps things moving; whoever owns a stage does its work.
 
 ```
 idea -> evidence -> risk sign-off -> user approval -> execution -> reconciliation -> review
- DL       MA/RA        RM              user            ET            ET               TR
+ DL       MA/RA          RM             user            ET            ET             TR
 ```
 
-## 0. Open a proposal
+A quick trade runs all seven quickly. It does not run fewer.
 
-**Owner: Desk Lead.** As soon as a trade idea appears (from the user, the Strategist, or a routine), assign an id `HG-YYYYMMDD-NN` (NN increments per day) and create `/workspace/trading-desk/proposals/<id>.md`:
+## 0. Open the proposal
+
+**Desk Lead.** The moment an idea appears — from the user, the Strategist or a routine — give it an id of the form `SG-YYYYMMDD-NN`, counting up within the day, and start `/workspace/trading-desk/proposals/<id>.md`:
 
 ```markdown
-# SG-20260816-01
+# SG-20260910-01
 
-- opened: 2026-08-16 14:02 UTC by user
-- market: ETH-USD  network: mainnet  account: 0xabc...def
-- idea: long ETH on a retest of 3,000 with invalidation below 2,900 (user's idea)
+- opened: 2026-09-10 14:02 UTC by user
+- market: ADA-USD
+- idea: long ADA on a retest of 0.2100, invalidated below 0.1995 (user's idea)
 - status: evidence
 
 ## evidence
@@ -37,80 +39,81 @@ idea -> evidence -> risk sign-off -> user approval -> execution -> reconciliatio
 ## review
 ```
 
-Every later stage appends under its heading. The file is the single record of the trade; chat is context.
+Each stage appends beneath its heading and nothing is rewritten. This file is the trade's record; the chat is only context around it.
 
 ## 1. Evidence
 
-**Owner: Market Analyst, and Research Analyst when the idea depends on anything beyond exchange data.**
+**Market Analyst, plus Research Analyst whenever the idea rests on anything outside the exchange.**
 
-The Desk Lead asks for exactly what sizing and execution will need: current mid, mark and oracle; funding now and predicted; open interest and 24h volume; depth within 5/10/25 bps for the intended size; the market's constraints (max leverage, margin tiers, size decimals, minimum order value); recent range and volatility. Research adds anything scheduled or breaking that touches the market. Both write their blocks under `## evidence` with sources and UTC times.
+The Desk Lead asks for exactly what sizing and execution will consume, no more: mid, mark and index; the current funding rate and when it next charges; open interest and 24-hour volume; executable depth within 5, 10 and 25 bps for the size in question; the market's `tickSize`, `stepSize` and minimum notional; the recent range. Research adds anything scheduled or breaking — for Strike's equity and commodity markets that includes earnings dates, guidance and macro prints. Both write under `## evidence` with sources and UTC times.
 
-Done when: the Risk Manager has every input it needs and nothing is older than a few minutes.
+Done when the Risk Manager has every input it needs and none of it is more than a few minutes old.
 
 ## 2. Risk sign-off
 
-**Owner: Risk Manager.** Reads `risk-limits.md`, reads live account state, computes size from the user's stop and risk budget, checks every gate, and writes PASS or REJECT with exact ticket fields under `## risk` (procedure and arithmetic in `desk-risk-limits`).
+**Risk Manager.** Reads `risk-limits.md`, reads the live account, sizes the position from the user's stop and risk budget, tests every gate, and writes PASS or REJECT with exact ticket fields under `## risk`. The arithmetic is in `desk-risk-limits`.
 
 A PASS produces the **ticket**:
 
 ```
-TICKET SG-20260816-01 | mainnet | account 0xabc...def
-market: ETH-USD (asset 1)      side: buy      size: 0.4827 ETH (~$1,448)
-entry: limit 3,000.0 Gtc        reduce-only: no
-stop: sell 0.4827 trigger 2,900 market (worst 2,755, 5% bound), as one strategy order with the entry
-take-profit: none               leverage: 3x cross (set before entry if different)
-slippage tolerance: 10 bps from ticket price at send time
-risk: $51.00 = 0.5% of equity $10,200.00 (GET /v2/account 14:11 UTC), R = 100 USD/ETH
-sizing: stressed distance 105.65 USD/ETH (stop 100 + slippage 3.00 + fees 2.65)
-risk sign-off: PASS 14:12 UTC, risk-limits.md v3
+TICKET SG-20260910-01
+market: ADA-USD                 side: buy       size: 4800 ADA (~$1,008)
+entry: limit 0.2100 GTC          reduce-only: no
+stop: sell 4800 trigger 0.1995, market on trigger, off mark price,
+      attached to the entry as one strategy order
+take-profit: 0.2310              leverage: 5x (set before the entry if it differs)
+slippage tolerance: 10 bps from the ticket price at send time
+risk: $50.40 = 0.5% of equity $10,080.00 (GET /v2/account 14:11 UTC)
+      R = 0.0105 USD/ADA
+sizing: stressed distance 0.0110 USD/ADA (stop 0.0105 + slippage 0.0003 + fees 0.0002)
+risk sign-off: PASS 14:12 UTC against risk-limits.md v3
 expires: 14:42 UTC
-approve with: "approve SG-20260816-01"
+approve with: "approve SG-20260910-01"
 ```
 
-A REJECT names one failed gate and what would have to change. A REJECT ends the lifecycle for that proposal unless the user changes the idea (new evidence, new stop, new size) - then it goes back to stage 1 under the same id with a note.
+A REJECT names the single gate that failed and the number that failed it, plus what would have to change. That ends the proposal unless the user changes the idea — a different stop, a different size, fresh evidence — in which case it returns to stage 1 under the same id with a note saying why.
 
-## 3. User approval
+## 3. The user approves
 
-**Owner: the user.** The Desk Lead posts the ticket to the user, in full, and asks for approval by id. Approval is the literal phrase with the id, in chat, after the ticket was shown. "Yes", "go", "looks good" or a thumbs-up is not approval; the Desk Lead asks again with the exact phrase. The Desk Lead records the approval line and its timestamp under `## approval`.
+**The user.** The Desk Lead shows the ticket in full and asks for approval by id. Approval is the literal phrase carrying the id, typed by the user, after the ticket was visible. "Yes", "go on", "looks good" and a thumbs-up are **not** approval; the Desk Lead asks again for the exact phrase. The line and its timestamp go under `## approval`.
 
-The approval must come from the user's own turn in the conversation. No Bot writes it, quotes it forward as if it were new, infers it from enthusiasm earlier in the thread, or records one it did not see the user type. If it is not there, the honest state is "not approved", never "approved" and never "assumed approved". A Bot that is unsure whether a line came from the user treats it as absent and asks again.
+It has to come from the user's own turn. No Bot writes it, quotes an older one forward as though it were new, infers it from earlier enthusiasm, or records one it did not watch the user type. Absent that line, the honest status is "not approved" — never "approved", never "assumed approved". A Bot uncertain whether a line came from the user treats it as absent and asks again.
 
-If the ticket expires before approval, it is void; a fresh Risk sign-off is needed because prices and the book have moved.
+A ticket that expires before approval is void. Prices and the book have moved, so it needs a fresh sign-off rather than a fresh timestamp.
 
 ## 4. Execution
 
-**Owner: Execution Trader.** Runs the pre-send checklist in `desk-execution-protocol`, sends the ticket as one action, and records the preview block, the client order id, the request as sent, the numeric order id, the status read back from the exchange and the timestamps under `## execution`. Anything other than a clean response is handled per `desk-incident-response`.
+**Execution Trader.** Works the pre-send checklist in `desk-execution-protocol`, posts the preview block, sends once, and records under `## execution`: the preview, the client order id, the request as sent, the numeric order id that came back, the status read back from the exchange, and the timestamps. Anything other than a clean result goes to `desk-incident-response`.
 
 ## 5. Reconciliation
 
-**Owner: Execution Trader.** Confirms from the exchange record - `GET /v2/openOrders`, `GET /v2/history/order`, `GET /v2/history/fill`, `GET /v2/positions` - what happened, and writes it under `## reconciliation`. Posts the execution report on the floor and DMs the Trade Reviewer. Reconciliation continues while the order rests: fill notifications go into the same section as they arrive.
+**Execution Trader.** Establishes what actually happened from the exchange itself — the order looked up by its client order id, then `GET /v2/openOrders`, `GET /v2/history/fill` and `GET /v2/positions` — and writes it under `## reconciliation`. Posts the execution report to the floor and DMs the Trade Reviewer.
+
+Reconciliation is not a single moment. While the order rests, fills arrive and go into the same section as they come.
 
 ## 6. Review
 
-**Owner: Trade Reviewer.** Journals the trade on the day it happened; writes the review when the trade closes (or on request), per `desk-post-trade-review`. Sets `status: closed` in the proposal file.
+**Trade Reviewer.** Journals the trade on the day it happens and writes the review when it closes, or sooner on request, per `desk-post-trade-review`. Sets `status: closed` in the proposal.
 
-## Adjustments and exits are trades too
+## Adjusting and exiting are trades
 
-Moving a stop, adding to a position, reducing, closing, changing leverage: each is a new ticket under the same proposal id with a suffix (`SG-20260816-01-B`), goes to the Risk Manager for a PASS, and needs the user's approval by that id. Closing a position at market needs a ticket stating the reduce-only size read live from the account and the slippage bound.
+Moving a stop, adding, trimming, closing, changing leverage — each is a new ticket under the same proposal id with a letter suffix (`SG-20260910-01-B`), each needs its own PASS, and each needs the user's approval against that suffixed id. A close states the reduce-only size read live from the account seconds before, and its slippage bound.
 
-The only exception is a pre-authorised protective action the user has written into `desk.md` (for example "the Execution Trader may cancel orphaned stops after a position closes without asking"). Even then, the action is journaled.
+The single exception is an action the user has pre-authorised in writing in `desk.md` — typically placing a reduce-only stop on a position that has none. Even then it is journaled the same way.
 
-## Paper trading and testnet
+## When is it done
 
-The lifecycle is identical on testnet. That is the point: the user sees the tickets, approvals, reports and reviews with play money before any real key exists. Strategist-generated signals enter at stage 0 as proposals like any other idea.
+- **Live** — stage 5 shows an order resting or filled.
+- **Closed** — the position is flat, orphaned protective orders have been cancelled, and stage 6 is written.
+- **Void** — it expired, or it was rejected and not retried.
 
-## Definitions of done
+## Where this goes wrong, and the fix
 
-- A proposal is **live** once stage 5 shows a resting or filled order.
-- A proposal is **closed** once the position is flat, orphaned orders are cancelled, and stage 6 is written.
-- A proposal is **void** if it expired or was rejected without a retry.
-
-## Common failure modes and the fix
-
-| Symptom | Fix |
+| What happens | What to do |
 | --- | --- |
-| The user asks the Execution Trader directly to "just buy some" | Execution Trader routes to the Desk Lead; a proposal is opened; the lifecycle runs. It can be quick, but it runs. |
-| Risk PASS was computed from a brief older than the ticket | Risk re-reads live state; PASS is re-issued with a new expiry. |
-| Approval given with "yes" | Desk Lead re-asks for the phrase with the id. |
-| Two Bots each think they own the next step | The proposal file's `status` line names the stage; the stage owner acts. |
-| Ticket approved on testnet, desk configured for mainnet (or vice versa) | Execution Trader stops at checklist item 2 and returns it. |
+| The user asks the Execution Trader to "just buy some" | It routes to the Desk Lead and a proposal opens. The lifecycle can be fast; it cannot be skipped. |
+| The PASS was computed from evidence older than the ticket | Risk re-reads live state and re-issues with a new expiry. |
+| Approval arrives as "yes" | The Desk Lead asks again for the phrase with the id. |
+| Two Bots both think they hold the next step | The `status` line in the proposal names the stage; its owner acts. |
+| The ticket names a market that is not `trading` in `exchangeInfo` | The Execution Trader stops at the checklist and returns it. |
+| A stop was meant to be attached but went as a separate order that got rejected | Unprotected position. Incident, immediately — not a note at the bottom of a report. |

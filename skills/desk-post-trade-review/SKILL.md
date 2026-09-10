@@ -1,88 +1,95 @@
 ---
 name: desk-post-trade-review
-description: The Trade Reviewer's procedure for journaling desk activity and reviewing trades from the exchange record - process graded separately from outcome, execution costs measured, one repeatable finding per review, plus the weekly desk review. Use after any send, when a trade closes, on the weekly routine, or when the user asks "how did that go".
+description: How the Trade Reviewer keeps the desk journal and reviews trades from the exchange's own record - grading process separately from outcome, measuring what execution actually cost, and drawing one repeatable finding per review - plus the weekly desk review and the incident review. Use after any send, when a trade closes, on the weekly routine, or when the user asks how something went.
 license: MIT
 metadata:
-  version: "1.0.2"
+  version: "3.0.0"
   author: Mendurim
   category: desk
 ---
 
-# Journal and post-trade review
+# Journal and review
 
-The journal is the desk's memory; the review is how the desk learns. Both come from the exchange record first and chat second, and both keep process and outcome apart.
+The journal is what the desk remembers. The review is how it improves. Both are built from the exchange record first and the conversation second, and both keep process and outcome strictly apart.
 
-## 1. Journal
+## 1. The journal
 
-`/workspace/trading-desk/journal/YYYY-MM-DD.md`, one file per active day, appended in time order. Entry types:
+One file per active day at `/workspace/trading-desk/journal/YYYY-MM-DD.md`, appended in time order.
 
 ```
-14:02 UTC  SG-20260816-01 opened   ETH-USD long idea (user); status evidence
-14:12 UTC  SG-20260816-01 risk     PASS 0.4827 ETH, stop 2,900, 0.5% risk stressed (risk-limits v3)
-14:29 UTC  SG-20260816-01 approval "approve SG-20260816-01" (user)
-14:31 UTC  SG-20260816-01 sent     bracket ADA-USD long 4800 @ 0.2100 GTC, tp 0.2310, sl 0.1995; cloid SG-20260816-01-entry; order id 1839201122; read back status 2 open
-16:05 UTC  SG-20260816-01 fill     0.4827 @ 3,000.0 maker, fee $0.29
-09:12 UTC  SG-20260816-01 closed   tp 3,089.6, fee $1.44; position flat; sl 2,900 cancelled 09:13
-10:00 UTC  limits                  risk-limits v3 -> v4: max positions 3 -> 4 (user, reason: adding HYPE)
-11:40 UTC  incident INC-20260817-01 unverified result on SG-20260817-02; not in order history at 11:41, 11:46 or 11:52; cannot prove dead, escalated to user 11:55; user stood the ticket down
-18:00 UTC  note                    maker entries at 10 bps depth filled within 2h on both attempts this week
+14:02 UTC  SG-20260910-01  opened    ADA-USD long idea (user); status evidence
+14:12 UTC  SG-20260910-01  risk      PASS 4800 ADA, stop 0.1995, 0.5% stressed (limits v3)
+14:29 UTC  SG-20260910-01  approval  "approve SG-20260910-01" (user)
+14:31 UTC  SG-20260910-01  sent      bracket ADA-USD long 4800 @ 0.2100 GTC, tp 0.2310, sl 0.1995
+                                     cloid SG-20260910-01-entry; order id 1839201122; read back status 2
+16:05 UTC  SG-20260910-01  fill      4800 @ 0.21003, maker, fee $0.29
+09:12 UTC  SG-20260910-01  closed    tp at 0.23100, fee $1.44; flat; sl cancelled 09:13
+10:00 UTC  limits                    v3 -> v4: position count 3 -> 4 (user; adding HYPE-USD)
+11:40 UTC  incident INC-20260911-01  unknown result on SG-20260911-02; looked up by cloid at 11:41,
+                                     absent; corroborated 11:46; replacement approved with a fresh id
+18:00 UTC  note                      maker entries at 10 bps filled inside 2h on both attempts this week
 ```
 
-Rules: append only; corrections are new lines with `correction:`; every line has a UTC time and an id where one exists; no opinions in the journal (those go in reviews).
+Append only. A correction is a new line beginning `correction:`, never an edit to an old one. Every line carries a UTC time, and an id wherever one exists. Opinions belong in reviews, not here.
 
-## 2. Trade review
+## 2. Reviewing a trade
 
-Trigger: a proposal reaches `closed`, or the user asks. Inputs, always listed with timestamps:
+Triggered when a proposal reaches `closed`, or whenever the user asks. List every input with its timestamp:
 
-- the proposal file (ticket, PASS, approval, execution, reconciliation)
-- `GET /v2/history/fill` / `GET /v2/history/fill` for the window: price, size, fee, side, `crossed`
-- `GET /v2/history/order` by symbol and status (2 open, 3 filled, 4 canceled, 5 untriggered, 6 rejected): what rested when, what cancelled
-- `GET /v2/history/fill` for the holding window
-- optionally the Market Analyst's depth read at send time for expected slippage
+- the proposal file — ticket, PASS, approval, execution, reconciliation
+- `GET /v2/history/fill` across the window: price, size, fee, side, maker or taker
+- `GET /v2/history/order` by symbol and status — 2 open, 3 filled, 4 canceled, **5 untriggered**, 6 rejected, 7 expired — to establish what rested when and what was cancelled
+- `GET /v2/closedPositions` for the realised result
+- `GET /v2/history/funding` for what holding it actually cost
+- where available, the Market Analyst's depth read at send time, to compare expected slippage against realised
 
-Compute:
+Then measure:
 
 | Measure | How |
 | --- | --- |
-| Entry slippage | (fill avg - ticket price) / ticket price in bps, signed against the trade |
-| Exit slippage | same for the exit versus its ticket or trigger price |
-| Fees | sum of fill fees in USD and as bps of notional; note maker vs taker |
-| Funding | sum of funding payments over the window, USD |
-| Net result | realised PnL after fees and funding, in USD and in R (R from the ticket) |
-| Protection | was a reduce-only stop resting on the exchange for the entire life of the position? gaps in minutes |
-| Lifecycle | each stage present, in order, with timestamps; approval by id; single send; reconciled |
-| Holding time | fill to flat |
+| Entry slippage | (average fill − ticket price) / ticket price, in bps, signed against the trade |
+| Exit slippage | the same for the exit, against its ticket or trigger price |
+| Fees | fill fees in USD and as bps of notional; note maker against taker |
+| Funding | the sum actually charged over the holding period |
+| Net result | realised PnL after fees and funding, in USD and in R, with R taken from the ticket |
+| Protection | was a reduce-only stop resting for the position's entire life? Any gap, in minutes |
+| Lifecycle | every stage present, in order, with timestamps; approval by id; one send; reconciled |
+| Holding time | first fill to flat |
 
-Grade:
+Grade two things, separately:
 
-- **Process:** clean / minor break / major break, with the specific stage named. A major break is any send without PASS or approval by id, any missing protection, any resend on unknown result, or any limit breached.
-- **Outcome:** result in R and USD, stated without adjectives.
+**Process** — clean, minor break, or major break, naming the stage. A major break is any send without a PASS or without approval by id, any period without protection, any resend on an unknown result before looking it up, or any limit breached.
 
-Then **one thing**: a leak, a control that worked, or a break, chosen because it is repeatable. Not a list.
+**Outcome** — the result in R and USD, stated without adjectives.
 
-Write the review under `## review` in the proposal file and send the block (format in `agents/trade-reviewer.md`) by DM to the Desk Lead and the user. Set `status: closed`.
+These are independent, and saying so out loud is the point. "Process: clean. Outcome: −0.9R at the stop" is a good trade that lost money. "Process: entry sent before the PASS. Outcome: +2R" is a bad trade that made money, and the review says so plainly.
 
-## 3. Weekly desk review
+Then **one finding**: a leak, a control that earned its keep, or a break — chosen because it will recur. One, not a list.
 
-From the journal, proposals and the exchange record for the week:
+Write it under `## review` in the proposal, send the block from `agents/trade-reviewer.md` by DM to the Desk Lead and the user, and set `status: closed`.
 
-- proposals opened / rejected / voided / executed / closed
-- trades closed: count, hit rate, average win and loss in R, expectancy in R (mean of results), largest loss, largest drawdown in equity terms from the journal or start/end equity
+## 3. The weekly review
+
+From the journal, the proposals and the exchange record for the week:
+
+- proposals opened, rejected, voided, executed, closed
+- trades closed: count, hit rate, average win and average loss in R, expectancy in R, largest loss, largest equity drawdown
 - costs: fees and funding in USD and as a share of gross PnL
-- process: number of breaks by type; incidents and their status
-- limits: any changes and why
-- one pattern worth the user's attention, stated as a fact pattern
+- process: breaks by type; incidents and where each stands
+- limits: what changed and why
+- one pattern worth the user's attention, stated as a fact pattern rather than advice
 
-No recommendations about what to trade. If the user asks, hand strategy questions to the Strategist and sizing questions to the Risk Manager.
+No recommendations about what to trade. Strategy questions go to the Strategist, sizing questions to the Risk Manager.
 
 ## 4. Incident review
 
-For each `INC-YYYYMMDD-NN`: timeline (journal + exchange record), what the desk did, what the controls did, exposure during the incident, root cause where knowable, one corrective action with an owner and a date. Blameless in tone, exact in fact. Written to `/workspace/trading-desk/journal/incidents/<id>.md` and linked from the daily journal.
+For each `INC-YYYYMMDD-NN`: the timeline from the journal and the exchange record, what the desk did, what the controls did, the exposure carried during the incident, the root cause where it is knowable, and one corrective action with an owner and a date. Blameless in tone and exact in fact. Written to `/workspace/trading-desk/journal/incidents/<id>.md` and linked from that day's journal.
 
 ## Pitfalls
 
-- Reviewing from chat memory rather than fills. Chat says what people meant; fills say what happened.
-- Letting the outcome colour the process grade. Grade process first, then look at the outcome.
-- Counterfactuals ("if we had held..."). Not evidence.
-- Ten findings per review. Nobody acts on ten.
-- Editing old journal lines. Append a correction.
+- Reviewing from memory of the conversation rather than from fills. The chat records what people meant; the fills record what happened.
+- Letting the outcome colour the process grade. Grade the process first, then look at the money.
+- Counterfactuals. "If we had held" is not evidence of anything.
+- Ten findings. Nobody acts on ten.
+- Editing an old journal line. Append a correction.
+- Counting only status 2 when checking whether protection existed. An untriggered stop is status 5, and missing that turns a protected position into a phantom incident.

@@ -2,7 +2,23 @@
 
 All notable changes to StrikeGrok are recorded here. Versions follow the release tags the bootstrap skill pins.
 
+## v1.1.0
+
+The desk's process documentation and all seven role prompts rewritten from scratch. Same seven roles, same lifecycle, same controls - new text throughout, and several things corrected on the way:
+
+- The workspace layout still showed `HG-` proposal ids. Now `SG-`, matching everything else.
+- The engagement levels still offered a testnet practice tier. Strike's testnet lists four markets with empty books and cannot fill an order, so the levels are now research and trading, with the preview block and a minimum-size live run in place of practice.
+- `strike-market-data` still told Bots that execution went through an MCP and warned of a `-PERP`/`-USD` symbol split. Both untrue since execution moved to the signed API, and both would have confused the Market Analyst on every brief.
+- Several skills still carried mechanics from a venue this desk does not use - grouped TP/SL parents, a funding-history request that does not exist here, a rate-limit endpoint, an `/info` path - and the Research Analyst's worked example cited sources from that venue.
+- The strategy lab still described paper trading on testnet. It now describes forward testing at minimum size through the ordinary lifecycle, and says plainly that this tests the rules and the plumbing rather than returns at size.
+- The `$schema` URL in `plugin.json` had been caught by an earlier version bump and pointed at a schema version that does not exist.
+
 ## v1.0.1
+
+Presentation pass. Skill authorship, the changelog, the attribution page and the README credit block rewritten so the repository describes itself rather than its lineage, and `LICENSE` carries a Mendurim copyright line.
+
+## v1.0.0
+
 
 First release. A seven-agent Strike Finance trading desk for Grok Bot: nineteen skills, seven role prompts, and a zero-key Opening Bell.
 
