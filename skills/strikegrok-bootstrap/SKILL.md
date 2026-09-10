@@ -1,6 +1,6 @@
 ---
 name: strikegrok-bootstrap
-description: Build and verify a StrikeGrok trading desk from the pinned public release. Use for first-run setup, repair, or a readiness check. Starts with a live zero-key Opening Bell on Strike's public Price Service, installs the seven role profiles and eighteen shared skills, prepares the Trading Floor, connects the crowdtime MCP only when the user asks to trade, and returns an evidence receipt. Read-only by default; never requests a token or places an order.
+description: Build and verify a StrikeGrok trading desk from the pinned public release. Use for first-run setup, repair, or a readiness check. Starts with a live zero-key Opening Bell on Strike's public Price Service, installs the seven role profiles and nineteen shared skills, prepares the Trading Floor, provisions the Strike API wallet only when the user asks to trade, and returns an evidence receipt. Read-only by default; never requests a key or places an order.
 license: MIT
 metadata:
   version: "1.0.0"
@@ -16,8 +16,8 @@ Turn a fresh shared **Desk Lead** into a working StrikeGrok desk. Finish with ev
 
 Bootstrap is research-only.
 
-- Do not request, read or store the crowdtime bearer token, or any other credential.
-- Do not call any MCP write tool, with or without `confirm`. Do not create an order, change leverage, or move funds.
+- Do not request, read or store the Strike API wallet keys, or any other credential.
+- Do not call any signed endpoint. Do not create an order, change leverage, or move funds.
 - Public Price Service reads are allowed. State the service, symbol and UTC time.
 - Local writes are limited to `/workspace/strikegrok` and `/workspace/trading-desk`.
 - Creating the seven named Bots and the private Trading Floor group is in scope. Sharing anything publicly is not.
@@ -61,7 +61,7 @@ python3 scripts/opening_bell.py --symbol ADA-USD
 python3 scripts/desk_doctor.py --desk-root /workspace/trading-desk
 ```
 
-Follow `strike-setup` sections 1-3 only. A `desk.md` warning from the doctor is expected until step 7; a repository or public API failure is not. The bearer token comes later, and only when the user asks to trade.
+Follow `strike-setup` sections 1-3 only. A `desk.md` warning from the doctor is expected until step 7; a repository or public API failure is not. The API wallet comes later, and only when the user asks to trade.
 
 ## 4. Create the Bots
 
@@ -85,12 +85,13 @@ Skills are shared across all the user's Bots, and a Desk Lead added from the pub
 
 For each directory under `skills/`, compare `name` and instructions with the shared skill when one exists. Matching: enabled, recorded `template`. Missing: saved unchanged, recorded `installed`. Too long to save: save a pointer skill - "When this skill is used, read `/workspace/strikegrok/skills/<name>/SKILL.md` and follow it" - recorded `pointer`. A same-name skill with different instructions that cannot be replaced is a `mismatch` and fails readiness.
 
-The receipt lists **exactly eighteen unique skill names** and one status each. A name alone is not proof its content is current.
+The receipt lists **exactly nineteen unique skill names** and one status each. A name alone is not proof its content is current.
 
-Eighteen skills:
+Nineteen skills:
 
 - Bootstrap: `strikegrok-bootstrap`
-- Strike: `strike-setup`, `strike-mcp`, `strike-market-data`, `strike-account`, `strike-orders`, `strike-positions`, `strike-websocket`, `strike-research-tools`, `strike-api-reference`
+- Strike: `strike-setup`, `strike-auth`, `strike-market-data`, `strike-account`, `strike-orders`, `strike-positions`, `strike-advanced`, `strike-websocket`, `strike-api-reference`
+- Optional: `strike-research-tools` (the crowdtime MCP add-on; the desk trades fully without it)
 - Desk: `desk-operating-model`, `desk-trade-lifecycle`, `desk-risk-limits`, `desk-execution-protocol`, `desk-monitoring`, `desk-post-trade-review`, `desk-incident-response`, `desk-strategy-lab`
 
 Tell each Bot which skills are its own, from its agent file's frontmatter. Any Bot may read any skill; the Execution Trader is the one Bot that acts on the write paths in `strike-orders` and `strike-positions`.
@@ -103,15 +104,15 @@ One group chat named **Trading Floor** with exactly six Bots: Desk Lead, Market 
 
 Post this first:
 
-> Welcome to the Trading Floor. Desk Lead routes; Market Analyst and Research Analyst bring evidence; Strategist helps the user test their own ideas; Risk Manager sizes and can refuse; Execution Trader is the one Bot that sends orders, on a ticket the user approved by id. Market data comes from Strike's public Price Service in `-USD` symbols; execution goes through the crowdtime MCP in `-PERP` symbols. Rules: `/workspace/strikegrok/skills/desk-operating-model/SKILL.md`. Trade Reviewer is a DM away. Today is setup: nothing goes to the exchange.
+> Welcome to the Trading Floor. Desk Lead routes; Market Analyst and Research Analyst bring evidence; Strategist helps the user test their own ideas; Risk Manager sizes and can refuse; Execution Trader is the one Bot that sends orders, on a ticket the user approved by id. Market data comes from Strike's public Price Service; execution goes through the signed Strike API with the desk's API wallet. Same `-USD` symbols on both. Rules: `/workspace/strikegrok/skills/desk-operating-model/SKILL.md`. Trade Reviewer is a DM away. Today is setup: nothing goes to the exchange.
 
 ## 7. Approvals and the desk record
 
-Ask the user to open **Settings, General, Auto-review** and add a **Require Approval** rule for financial actions and for any command that calls `mcp.crowdtime.io`. If the rule syntax cannot express that, say so; the desk's protocol still holds. That rule is the gate: the approval phrase in chat is the desk's record that the user agreed, but the Bots write the floor's messages, so it cannot be the only thing in the way of a send.
+Ask the user to open **Settings, General, Auto-review** and add a **Require Approval** rule for financial actions and for any command that runs `scripts/strike_request.py` with a method other than GET. If the rule syntax cannot express that, say so; the desk's protocol still holds. That rule is the gate: the approval phrase in chat is the desk's record that the user agreed, but the Bots write the floor's messages, so it cannot be the only thing in the way of a send.
 
 Then ask two questions and write `/workspace/trading-desk/desk.md`:
 
-1. Engagement level: **research** (no token) or **trading**. There is no useful testnet middle - Strike's testnet books are empty, so the desk rehearses with dry runs and minimum-size live orders instead (`strike-setup` section 6).
+1. Engagement level: **research** (no key) or **trading**. There is no useful testnet middle - Strike's testnet books are empty, so the desk rehearses with preview blocks and minimum-size live orders instead (`strike-setup` section 6).
 2. May the desk place a protective stop for a position that has none, without waiting for approval? It is reduce-only. Record the answer either way, with the date.
 
 ```markdown
@@ -121,15 +122,16 @@ Then ask two questions and write `/workspace/trading-desk/desk.md`:
 - instructions commit: 0000000        # git rev-parse HEAD from step 1
 - engagement level: research
 - market data: Strike Price Service (public, no key)
-- execution: crowdtime MCP https://mcp.crowdtime.io/mcp   # token not yet provisioned
-- tradeable universe: 15 MCP markets   # strike_scan_markets is the authority
+- execution: Strike signed API https://api.strikefinance.org   # API wallet not yet provisioned
+- tradeable universe: 31 markets   # /v2/exchangeInfo status=trading is the authority
+- research add-on: crowdtime MCP   # optional, not connected
 - bots: Desk Lead, Market Analyst, Research Analyst, Strategist, Risk Manager, Execution Trader, Trade Reviewer
 - group chats: Trading Floor (6)
 - risk limits: not yet written  (Risk Manager runs the interview: skills/desk-risk-limits)
 - standing approvals: none          # recommended: protective stops (reduce-only)
 - rehearsed action kinds: none      # bracket / trigger / close, each at minimum size
 - unprotected position deadline: 15m
-- status: research-only until a bearer token is provisioned
+- status: research-only until an API wallet is provisioned
 ```
 
 Then hand the Risk Manager the `desk-risk-limits` interview to write `risk-limits.md` with the user.
@@ -147,7 +149,7 @@ Then run these and record the results:
 1. Trading Floor: "@Market Analyst brief us on BTC." Expect a timestamped brief with sources.
 2. "@Risk Manager assuming equity of 10,000 USD and the current limits, size a hypothetical long ADA with a 5% stop." Expect a PASS or REJECT with the arithmetic and a ticket, and a note that nothing will be sent.
 3. "@Execution Trader what would you need before sending that ticket?" Expect the pre-send checklist, the dry-run step, and a refusal to send without approval by id.
-4. "@Execution Trader which symbol would you send that on?" Expect `ADA-PERP`, not `ADA-USD`. Getting this wrong is the most likely cause of a failed first send.
+4. "@Execution Trader show me the preview block for that ticket." Expect the exact JSON body, with a `client_order_id` derived from the ticket id and a stop in the same strategy order - and a refusal to send it.
 5. DM the Trade Reviewer: "Open today's journal and record that the desk was set up." Expect a journal entry.
 6. Ask the Research Analyst for one sourced fact about Strike Finance itself.
 
@@ -161,6 +163,6 @@ Give the user:
 - the desk record and its engagement level
 - the desk doctor and Opening Bell results
 - the results of the six verification checks
-- confirmation that setup stayed read-only: no token requested, no MCP write tool called, no order placed
+- confirmation that setup stayed read-only: no key requested, no signed endpoint called, no order placed
 
-Then say: "The desk is ready. Ask the Desk Lead for a market brief to see it work. When you want it to trade, say 'connect the Strike MCP' and it will walk you through `strike-setup` step 4."
+Then say: "The desk is ready. Ask the Desk Lead for a market brief to see it work. When you want it to trade, say 'set up the Strike API wallet' and it will walk you through `strike-auth`."

@@ -9,7 +9,6 @@ skills:
   - strike-market-data
   - strike-api-reference
   - strike-research-tools
-  - strike-mcp
 writes_to_exchange: false
 ---
 

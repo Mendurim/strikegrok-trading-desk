@@ -1,6 +1,6 @@
 # Set up the StrikeGrok trading desk
 
-You are a Grok Bot building the user's Strike trading desk from this repository. Follow this file top to bottom. When you finish, the user has seven specialist Bots (six on a **Trading Floor** group chat, one reviewer by DM), eighteen shared skills, a prepared desk computer and a written desk record. Setup is read-only: no token, no orders.
+You are a Grok Bot building the user's Strike trading desk from this repository. Follow this file top to bottom. When you finish, the user has seven specialist Bots (six on a **Trading Floor** group chat, one reviewer by DM), nineteen shared skills, a prepared desk computer and a written desk record. Setup is read-only: no API wallet, no orders.
 
 If your runtime loaded this repository as a plugin, invoke `strikegrok-bootstrap`: it performs this runbook, rings a live zero-key Opening Bell first, and returns the same receipt. This file remains the complete manual path and source of truth.
 
@@ -71,18 +71,19 @@ Grok Bot lets existing Bots create focused Bots. If you can create them, do so n
 
 Skills in Grok Bot are shared across all of the user's Bots. Inspect the shared skills first: a Desk Lead added from the public StrikeGrok template already carries this release's reviewed set, and setup must not create duplicates.
 
-For each directory under `skills/`, read `SKILL.md` and compare its `name` and instructions with the shared skill when one exists. A matching skill is enabled and recorded as `template`. A missing skill is saved unchanged and recorded as `installed`. If the app cannot save a skill of that length, save a short pointer skill instead: "When this skill is used, read `/workspace/strikegrok/skills/<name>/SKILL.md` and follow it," and record `pointer`. A same-name skill with different instructions that cannot be replaced by the reviewed file is a `mismatch` and fails readiness. The receipt must list exactly eighteen unique names and one status for each; a name alone is not proof that its content is current.
+For each directory under `skills/`, read `SKILL.md` and compare its `name` and instructions with the shared skill when one exists. A matching skill is enabled and recorded as `template`. A missing skill is saved unchanged and recorded as `installed`. If the app cannot save a skill of that length, save a short pointer skill instead: "When this skill is used, read `/workspace/strikegrok/skills/<name>/SKILL.md` and follow it," and record `pointer`. A same-name skill with different instructions that cannot be replaced by the reviewed file is a `mismatch` and fails readiness. The receipt must list exactly nineteen unique names and one status for each; a name alone is not proof that its content is current.
 
 When copying a skill into another workspace or distributing the desk, retain its `LICENSE` and `ATTRIBUTION.md` beside the instructions. If the destination only accepts a single instruction field, keep the complete license notice in its accompanying project documentation or third-party notices. See [reuse and attribution](ATTRIBUTION.md); stars and public credit links are optional.
 
 
-Skills to install (18):
+Skills to install (19):
 
 - Bootstrap: `strikegrok-bootstrap`
-- Strike: `strike-setup`, `strike-mcp`, `strike-market-data`, `strike-account`, `strike-orders`, `strike-positions`, `strike-websocket`, `strike-research-tools`, `strike-api-reference`
+- Strike: `strike-setup`, `strike-auth`, `strike-market-data`, `strike-account`, `strike-orders`, `strike-positions`, `strike-advanced`, `strike-websocket`, `strike-api-reference`
+- Optional: `strike-research-tools` (the crowdtime MCP add-on; the desk trades fully without it)
 - Desk: `desk-operating-model`, `desk-trade-lifecycle`, `desk-risk-limits`, `desk-execution-protocol`, `desk-monitoring`, `desk-post-trade-review`, `desk-incident-response`, `desk-strategy-lab`
 
-Tell each Bot which skills are its own (listed in its agent file's frontmatter). Any Bot may read any skill; the Execution Trader is the one Bot that acts on the write paths in `strike-orders` and `strike-positions`.
+Tell each Bot which skills are its own (listed in its agent file's frontmatter). Any Bot may read any skill; the Execution Trader is the one Bot that acts on the write paths in `strike-orders`, `strike-positions` and `strike-advanced`.
 
 ## 6. Create the Trading Floor
 

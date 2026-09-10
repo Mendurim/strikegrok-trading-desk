@@ -27,9 +27,11 @@ The Desk Lead confirms an owner (usually the Execution Trader for order/position
 ### A. Unknown send result (timeout, 5xx, exception after send)
 
 1. Do not resend.
-2. `strike_get_open_orders`; `strike_get_order_history` for the symbol and window; `strike_get_fill_history` since the send; `strike_get_open_positions`.
+2. `GET /v2/order --query client_order_id=<id>` first - the authoritative answer. Then corroborate: `GET /v2/openOrders`, `GET /v2/history/order` for the symbol and window, `GET /v2/history/fill` since the send, `GET /v2/positions`.
 3. Found: continue reconciliation as normal; journal that the response was lost.
-4. Not found: that is not proof. The original can still arrive after any number of clean checks. **Strike's MCP offers no order expiry and no client order id on placement, so the desk cannot prove an order is dead** - there is no elapsed time that makes a replacement safe. Freeze new sends on the symbol, report `unverified, cannot prove dead` with the full read-back, and hand the decision to the user. A replacement needs their explicit fresh approval by id, given knowing the original may still appear. Keep re-reading the record on a schedule and journal each read.
+4. Not found by client order id, and corroborated: the send did not land. A replacement may go out with a **fresh** `client_order_id` and the user's approval by id. Never reuse the original id - that handle is the only thing that would tell the two sends apart if the first ever surfaced.
+
+5. If the lookup itself is unavailable, the desk is blind rather than informed. Freeze sends on that symbol, report `unknown, lookup unavailable`, and wait for the API. Elapsed time proves nothing: Strike has no order expiry.
 5. If the exchange later shows the original order after a second one was sent: the desk has double exposure. Go to playbook C.
 
 ### B. Rejected order or partial fill
@@ -40,7 +42,7 @@ The Desk Lead confirms an owner (usually the Execution Trader for order/position
 
 ### C. Position does not match expectation (too big, wrong side, unexpected market)
 
-1. Read `strike_get_account_balance` and `strike_get_fill_history` for the last hour; establish the exact state.
+1. Read `GET /v2/account` and `GET /v2/history/fill` for the last hour; establish the exact state.
 2. Risk Manager computes exposure and liquidation distance now.
 3. If exposure breaches limits: an **emergency reduce ticket** (reduce-only IOC at a slippage bound for the excess size) is written by the Risk Manager, approved by the user by id, sent by the Execution Trader. Priority handling, same protocol.
 4. Journal what happened and why the mismatch occurred once known.
@@ -54,22 +56,22 @@ The Desk Lead confirms an owner (usually the Execution Trader for order/position
 
 ### E. Orphaned or stuck orders
 
-- Orphaned (position flat, stop still resting): cancel ticket, or the standing approval for orphan clean-up if written in `desk.md`. Confirm from `strike_get_open_orders`.
-- Stuck (order the exchange shows that the desk cannot cancel): read `strike_get_order_history`; check whether it is a trigger child of a grouped order; try `cancelByCloid` if `cancel` by oid fails; if still stuck, report with the exact response and stop.
+- Orphaned (position flat, stop still resting): cancel ticket, or the standing approval for orphan clean-up if written in `desk.md`. Confirm from `GET /v2/openOrders`.
+- Stuck (an order the exchange shows that the desk cannot cancel): read `GET /v2/history/order` and `GET /v2/order --query client_order_id=<id>`; check whether it is an exit leg of a strategy order, which Strike manages with the entry; if `DELETE /v2/order/cancel` still fails, report the exact response and stop. Do not cancel-all to sweep it away - that would remove protection on positions that are still open.
 
 ### F. Exchange unreachable, rate limited, or degraded
 
-- `/info` failing or slow: mark the desk **blind**; no new tickets; watches log the outage; check `https://api.strikefinance.org/price/v2/exchangeInfo` with a tiny `strike_get_mark_price` call every minute; report when back.
+- Price Service failing or slow: mark the desk **blind**; no new tickets; watches log the outage; poll `https://api.strikefinance.org/price/v2/exchangeInfo` every minute; report when back. If the **signed** API is the one that is down, the desk cannot read its own account or look up an order either - that is the more serious outage, and no send happens until it clears.
 - HTTP 429: back off (respect the response), reduce polling, prefer WebSocket for continuous data. Read `userRateLimit` for the account's remaining budget.
 - Blind with open positions: the user is told plainly that stops resting **on the exchange** still work while the desk cannot see; that is why stops are mandatory.
 
 ### G. Suspected API wallet compromise or misuse
 
-Signs: orders or fills the desk did not send, leverage changes nobody approved, unfamiliar order ids in `strike_get_order_history`.
+Signs: orders or fills the desk did not send, leverage changes nobody approved, order ids in `GET /v2/history/order` with no matching `client_order_id` in any proposal file.
 
-1. The user revokes the API wallet immediately in the Strike app (the API page, `/API`) - the desk cannot do this for them and must not delay them.
+1. The user deletes the API wallet immediately at `app.strikefinance.org/api-keys` - the desk cannot do this for them and must not delay them.
 2. Once revoked, the desk's key is dead; the Execution Trader confirms sends fail.
-3. Read the full `strike_get_order_history` and `strike_get_fill_history` since the last known-good time; Risk Manager assesses exposure; emergency reduce or protection tickets as needed after the user creates a fresh API wallet and re-provisions it through the secure secret store.
+3. Read the full `GET /v2/history/order` and `GET /v2/history/fill` since the last known-good time, and `GET /v2/history/transaction` for anything that moved; Risk Manager assesses exposure; emergency reduce or protection tickets as needed after the user registers a fresh API wallet and re-provisions it through the secure secret store.
 4. Rotate: new key through the secure secret card only; nothing pasted in chat; journal the rotation time.
 5. Incident review with a timeline.
 

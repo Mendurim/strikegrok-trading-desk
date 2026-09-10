@@ -36,7 +36,7 @@ markets (Market Analyst, /v2/ticker/price + /v2/premiumIndex 06:58 UTC):
   BTC 97,120 (+0.8% 24h) | funding 0.0010%/h | OI $4.1B
   ETH 3,004 (+0.2%) | funding 0.0012%/h | OI $1.2B
   SOL 151.2 (-1.1%) | funding -0.0004%/h | OI $610M
-book (Risk Manager, strike_get_account_balance 06:59 UTC): 1 position, ETH long 0.4827 @ 3,000, uPnL +$1.9, margin ratio 4.6%, stop resting 2,900; open risk 0.5%; day PnL 0.0%
+book (Risk Manager, GET /v2/account 06:59 UTC): 1 position, ETH long 0.4827 @ 3,000, uPnL +$1.9, margin ratio 4.6%, stop resting 2,900; open risk 0.5%; day PnL 0.0%
 research (Research Analyst): ETH client release scheduled 2026-08-19 [link]; nothing breaking on held markets
 open items: SG-20260816-01 live; no pending tickets
 ```
@@ -48,18 +48,18 @@ Facts with sources; interpretation, if any, on one clearly labelled line. No tra
 A watch is a condition plus an alert. Two ways to run one on the desk computer:
 
 - **Polling** with `/info` calls on a short loop from a script under `/workspace/trading-desk/watch/` (respect rate limits: `/info` requests carry weight; a poll every 5-15 seconds per market is plenty for a desk).
-- **WebSocket** subscriptions (`strike_get_mark_price`, `/v2/depth`, `trades`, `candle`, `strike_get_fill_history`, `orderUpdates`, `userEvents`) per `strike-websocket`. Better for fills and order updates. Keep the process supervised (a routine can restart it) and log to a file.
+- **WebSocket** subscriptions (`/v2/markPrice`, `/v2/depth`, `trades`, `candle`, `GET /v2/history/fill`, `orderUpdates`, `userEvents`) per `strike-websocket`. Better for fills and order updates. Keep the process supervised (a routine can restart it) and log to a file.
 
 Common watch conditions:
 
 | Watch | Data | Alert to |
 | --- | --- | --- |
-| Price crosses a level | `strike_get_mark_price` or `candle` | user, Desk Lead |
+| Price crosses a level | `/v2/markPrice` or `candle` | user, Desk Lead |
 | Funding flips sign or exceeds a threshold | `/v2/premiumIndex` `funding` / `predictedFundings` | user, Desk Lead |
-| Order filled or cancelled | `orderUpdates`, `strike_get_fill_history` | Execution Trader, Trade Reviewer |
-| Margin ratio above X or liquidation distance below Y | `strike_get_account_balance` | user, Risk Manager, Desk Lead |
-| Position without a resting stop | `strike_get_account_balance` + `strike_get_open_orders` | Risk Manager, Desk Lead (incident) |
-| Daily loss stop approached (80%) or hit | `strike_get_account_balance` vs start-of-day equity | user, Risk Manager |
+| Order filled or cancelled | `orderUpdates`, `GET /v2/history/fill` | Execution Trader, Trade Reviewer |
+| Margin ratio above X or liquidation distance below Y | `GET /v2/account` | user, Risk Manager, Desk Lead |
+| Position without a resting stop | `GET /v2/account` + `GET /v2/openOrders` | Risk Manager, Desk Lead (incident) |
+| Daily loss stop approached (80%) or hit | `GET /v2/account` vs start-of-day equity | user, Risk Manager |
 | Exchange unreachable for more than N minutes | any `/info` call failing | Desk Lead |
 
 An alert message carries: what fired, the value and the threshold, the source and UTC time, and the proposal id if related. Alerts do not include instructions to trade.

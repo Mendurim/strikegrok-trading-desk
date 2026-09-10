@@ -62,22 +62,40 @@ The desk builds itself research-only: no token, no MCP write tool, no order.
 
 ## 5. Connect execution, when you are ready to trade
 
-The desk reads markets with no credential at all. Execution needs the crowdtime
-bearer token, and that is per-user, so it never lives in this repository.
+The desk reads markets with no credential at all. Execution needs a **Strike API
+wallet** - an Ed25519 keypair you generate and register yourself.
 
-1. Create the token in **crowdtime API Settings**.
-2. Add it to **Grok Bot's secure secret store** as `STRIKE_MCP_TOKEN`.
-3. Tell the Desk Lead "connect the Strike MCP" and it will run
-   `strike-setup` step 4, then the read-only readiness check.
+1. Generate the keypair on the desk computer (`strike-auth` section 2):
 
-Optionally add the server as a Grok connector instead
-(`grok.com/connectors` -> New Connector -> Custom ->
-`https://mcp.crowdtime.io/mcp`). That needs a team admin, and xAI does not
-document whether a connector reaches a named Bot, so test it before relying on
-it; the secret-store route always works.
+   ```bash
+   umask 077
+   openssl genpkey -algorithm ed25519 -out /tmp/api-wallet.pem
+   openssl pkey -in /tmp/api-wallet.pem -outform DER | tail -c 32 | xxd -p -c 64   # private seed
+   openssl pkey -in /tmp/api-wallet.pem -pubout -outform DER | tail -c 32 | xxd -p -c 64   # public
+   shred -u /tmp/api-wallet.pem
+   ```
 
-**Never commit the token.** If it has ever appeared in a chat, a log or a
-screenshot, rotate it in crowdtime API Settings before the desk trades.
+2. Register the **public** key at `app.strikefinance.org/api-keys`.
+3. Put both into **Grok Bot's secure secret store** as `STRIKE_API_PUBLIC_KEY`
+   and `STRIKE_API_PRIVATE_KEY`. Never chat, never a file in the repository.
+4. Tell the Desk Lead "set up the Strike API wallet" and it will run the
+   readiness check.
+
+The key can trade. Neither the trade API nor the user API exposes a withdraw,
+deposit or transfer endpoint, so it cannot take money out - moving funds happens
+in the Strike app, with you.
+
+**Never commit a private key.** If one has appeared in a chat, a log or a
+screenshot, register a new key and delete the old one before the desk trades.
+
+### Optional: the research add-on
+
+`strike-research-tools` uses the crowdtime MCP for a liquidity screen, computed
+indicators, news and dividend research playbooks, Bodega prediction markets and
+Discord alerts. It is **not** on the trading path and the desk works fully
+without it. If you want it, put its bearer token in the secret store as
+`STRIKE_MCP_TOKEN`; if you do not, provision nothing - the smallest credential
+set is the safest one.
 
 ## 6. Optional: publish a one-click Desk Lead
 

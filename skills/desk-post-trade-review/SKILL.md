@@ -17,10 +17,10 @@ The journal is the desk's memory; the review is how the desk learns. Both come f
 `/workspace/trading-desk/journal/YYYY-MM-DD.md`, one file per active day, appended in time order. Entry types:
 
 ```
-14:02 UTC  SG-20260816-01 opened   ETH-PERP long idea (user); status evidence
+14:02 UTC  SG-20260816-01 opened   ETH-USD long idea (user); status evidence
 14:12 UTC  SG-20260816-01 risk     PASS 0.4827 ETH, stop 2,900, 0.5% risk stressed (risk-limits v3)
 14:29 UTC  SG-20260816-01 approval "approve SG-20260816-01" (user)
-14:31 UTC  SG-20260816-01 sent     bracket ADA-PERP long 4800 @ 0.2100 GTC, tp 0.2310, sl 0.1995; order id 1839201122; LIVE STATUS resting
+14:31 UTC  SG-20260816-01 sent     bracket ADA-USD long 4800 @ 0.2100 GTC, tp 0.2310, sl 0.1995; cloid SG-20260816-01-entry; order id 1839201122; read back status 2 open
 16:05 UTC  SG-20260816-01 fill     0.4827 @ 3,000.0 maker, fee $0.29
 09:12 UTC  SG-20260816-01 closed   tp 3,089.6, fee $1.44; position flat; sl 2,900 cancelled 09:13
 10:00 UTC  limits                  risk-limits v3 -> v4: max positions 3 -> 4 (user, reason: adding HYPE)
@@ -35,9 +35,9 @@ Rules: append only; corrections are new lines with `correction:`; every line has
 Trigger: a proposal reaches `closed`, or the user asks. Inputs, always listed with timestamps:
 
 - the proposal file (ticket, PASS, approval, execution, reconciliation)
-- `strike_get_fill_history` / `strike_get_fill_history` for the window: price, size, fee, side, `crossed`
-- `strike_get_order_history` by symbol and status (2 open, 3 filled, 4 canceled, 5 untriggered, 6 rejected): what rested when, what cancelled
-- `strike_get_fill_history` for the holding window
+- `GET /v2/history/fill` / `GET /v2/history/fill` for the window: price, size, fee, side, `crossed`
+- `GET /v2/history/order` by symbol and status (2 open, 3 filled, 4 canceled, 5 untriggered, 6 rejected): what rested when, what cancelled
+- `GET /v2/history/fill` for the holding window
 - optionally the Market Analyst's depth read at send time for expected slippage
 
 Compute:

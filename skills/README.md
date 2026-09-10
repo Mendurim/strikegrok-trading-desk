@@ -1,6 +1,6 @@
 # Skills
 
-Eighteen skills in the portable `SKILL.md` format (`name` and `description` frontmatter, body under 320 lines). Grok Bot reads them from `/workspace/strikegrok/skills/<name>/SKILL.md` and saves each as a shared skill; Grok Build, Cursor and Claude Code load the directory as a plugin.
+Nineteen skills in the portable `SKILL.md` format (`name` and `description` frontmatter, body under 320 lines). Grok Bot reads them from `/workspace/strikegrok/skills/<name>/SKILL.md` and saves each as a shared skill; Grok Build, Cursor and Claude Code load the directory as a plugin.
 
 ## Bootstrap
 
@@ -10,19 +10,20 @@ Eighteen skills in the portable `SKILL.md` format (`name` and `description` fron
 
 ## Strike skills (how to work with the exchange)
 
-The desk uses two surfaces: the **public REST Price Service** for market data, and the **crowdtime MCP** for execution. They use different symbols - `XAU-USD` on one is `GOLD-PERP` on the other - and `strike-mcp` holds the translation table.
+Market data is the **public Price Service**; everything else is the **signed trading API**, authenticated with an Ed25519 API wallet. One symbol vocabulary throughout (`ADA-USD`, `XAU-USD`), and all thirty-one markets are tradeable.
 
 | Skill | What it teaches | Writes? | Primary users |
 | --- | --- | --- | --- |
-| [strike-setup](strike-setup/SKILL.md) | The two surfaces, connectivity checks, the bearer token through the secure secret store, readiness check, rotation, and why testnet cannot rehearse | no | Desk Lead, Execution Trader |
-| [strike-mcp](strike-mcp/SKILL.md) | The execution transport: endpoint, auth, both routes from Grok Bot, the symbol map, all twenty-two tools, the confirm gate, LIVE STATUS, errors | no (describes writes) | everyone |
-| [strike-market-data](strike-market-data/SKILL.md) | REST prices, depth bands, funding, open interest, 24h stats, candles, per-market constraints; the MCP's indicator snapshot and market scan | no | Market Analyst, Strategist, Risk Manager |
-| [strike-account](strike-account/SKILL.md) | Equity and margin, open positions, resting orders, closed positions, order history by status, fills with paging, reconstructing a round trip | no | Risk Manager, Execution Trader, Trade Reviewer |
-| [strike-orders](strike-orders/SKILL.md) | Market and limit entries, brackets with attached TP/SL, standalone triggers, cancels, rounding, the dry run, reading LIVE STATUS | **yes** | Execution Trader |
-| [strike-positions](strike-positions/SKILL.md) | Leverage and margin mode, the server's leverage cap, margin and liquidation distance, protecting a position, closing reduce-only | **yes** (leverage, protection, closes) | Execution Trader, Risk Manager (reads) |
-| [strike-websocket](strike-websocket/SKILL.md) | Public price stream and authenticated user stream, order-book sync, watch processes, heartbeat and supervision | no | Market Analyst, Execution Trader, Strategist |
-| [strike-research-tools](strike-research-tools/SKILL.md) | Crypto, equity and dividend research playbooks, Bodega prediction markets, Discord alerts | no (Discord posts) | Research Analyst, Desk Lead |
-| [strike-api-reference](strike-api-reference/SKILL.md) | Every REST endpoint and MCP tool with arguments, the symbol map, order status codes, constraints, rate limits, error strings | no | everyone |
+| [strike-setup](strike-setup/SKILL.md) | The two surfaces, connectivity checks, provisioning the API wallet, readiness check, rotation, and why testnet cannot rehearse | no | Desk Lead, Execution Trader |
+| [strike-auth](strike-auth/SKILL.md) | Generating and registering the Ed25519 API wallet, the request signing scheme, the signed-request helper, what the key can and cannot do, rotation | no | Execution Trader, Desk Lead |
+| [strike-market-data](strike-market-data/SKILL.md) | Public prices, depth bands, funding, open interest, 24h stats, candles, per-market constraints | no | Market Analyst, Strategist, Risk Manager |
+| [strike-account](strike-account/SKILL.md) | Account and balances, positions, open orders, closed positions, order and fill history, funding paid, the transaction ledger, single-order lookup by client id | no | Risk Manager, Execution Trader, Trade Reviewer |
+| [strike-orders](strike-orders/SKILL.md) | Limit, bounded market, bracket strategy orders, standalone triggers, trailing stops, replace, cancel, client order ids, rounding, the preview block | **yes** | Execution Trader |
+| [strike-positions](strike-positions/SKILL.md) | Leverage, margin mode, margin and liquidation distance, protecting a position, closing reduce-only | **yes** | Execution Trader, Risk Manager (reads) |
+| [strike-advanced](strike-advanced/SKILL.md) | TWAP, batch and batch-replace, cancel-all, isolated-margin adjustment, order flags, and what the desk refuses | **yes** | Execution Trader |
+| [strike-websocket](strike-websocket/SKILL.md) | Public price stream and signed user stream, order-book sync, watch processes, heartbeat and supervision | no | Market Analyst, Execution Trader, Strategist |
+| [strike-research-tools](strike-research-tools/SKILL.md) | The **optional** crowdtime MCP add-on: liquidity screen, computed indicators, news and dividend research playbooks, Bodega, Discord alerts | no | Research Analyst, Desk Lead |
+| [strike-api-reference](strike-api-reference/SKILL.md) | Every endpoint and field, the signing scheme, order types and flags, status codes, constraints, rate limits, error strings | no | everyone |
 
 ## Desk skills (how the team works)
 
@@ -40,6 +41,6 @@ The desk uses two surfaces: the **public REST Price Service** for market data, a
 ## Conventions
 
 - Frontmatter: `name` (matches the directory), `description` (what and when, under 1024 characters), `license`, `metadata` (`version`, `author`, `category`, and `network-default` for Strike skills).
-- Bodies: purpose, concepts, copy-pasteable commands (`curl` for REST reads, `call_mcp` for MCP tools), procedure, pitfalls. No strategy content, no return claims, no emoji.
-- Every write path says who may use it and under what approval. Every read says which surface and which symbol spelling.
-- Snippets are self-contained: each includes its own environment and token loading so a Bot can copy one block and run it.
+- Bodies: purpose, concepts, copy-pasteable commands (`curl` for public reads, `scripts/strike_request.py` for signed calls), procedure, pitfalls. No strategy content, no return claims, no emoji.
+- Every write path says who may use it and under what approval. Every read says which surface it came from.
+- Snippets are self-contained: each includes its own environment loading so a Bot can copy one block and run it.

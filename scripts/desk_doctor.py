@@ -196,7 +196,7 @@ def check_workspace(root: str) -> list[Check]:
 def check_public_api(base_url: str, timeout: float) -> Check:
     """Read the public Price Service only. The doctor never touches the MCP.
 
-    Execution lives behind a bearer token, and a doctor that authenticated to
+    Execution lives behind the API wallet, and a doctor that authenticated to
     check the write path would be a doctor that could place an order. So this
     reports on market data alone, and says so, rather than implying the desk's
     trading route has been verified.

@@ -8,7 +8,7 @@ StrikeGrok is instructions and resources for a user's Grok Bot, not software the
 + No strategies, signals, alpha or return claims anywhere in the repository. The Strategist teaches method; users bring ideas.
 + Every write path stays behind the ticket protocol: Risk PASS, user approval by id, single bounded send, reconciliation. A change that weakens that is a rejected change.
 + Keep the desk's worked example consistent. `SG-20260816-01` runs through `README.md`, `desk-trade-lifecycle`, `desk-risk-limits`, `desk-monitoring`, `desk-post-trade-review`, `agents/risk-manager.md`, `agents/execution-trader.md` and `agents/trade-reviewer.md`. If you change its size, price or costs, change them everywhere and check the derived figures still hold: sizing is proportional, so the R multiple and the cost-in-bps should not move. The generic SDK snippets in `strike-orders` are not part of that narrative and use a round size on purpose.
-+ Never widen the credential model: the crowdtime bearer token only, through the secret store, never in chat, a log, or under `/workspace`.
++ Never widen the credential model: the Strike API wallet only, through the secret store, never in chat, a log, or under `/workspace`. The optional research add-on's token is separate and must stay off the trading path.
 + Verify snippets against the current SDK versions named in `docs/PROVENANCE.md` before changing them, and update the version there if you bump it.
 
 ## Layout

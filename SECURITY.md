@@ -6,10 +6,10 @@ What "vulnerability" means for a repository of instructions: any prose or snippe
 
 Operating reminders that live in the skills:
 
-+ Only the crowdtime bearer token ever reaches the desk computer, provisioned through Grok Bot's secure secret store, never through chat. Assume it can move funds: keep on Strike only what the desk is meant to trade.
++ Only the Strike API wallet (an Ed25519 keypair the user registers at `app.strikefinance.org/api-keys`) ever reaches the desk computer, provisioned through Grok Bot's secure secret store, never through chat. It can trade; neither the trade nor the user API exposes a withdraw, deposit or transfer endpoint.
 + All Bots for one user share a computer and sign-ins, so Bot identity is not a credential boundary; the key's permissions and the ticket protocol are.
 + If a send times out or errors after leaving the machine, do not retry. Reconcile the client order id first, and treat a replacement as unsafe until the original send's expiry has passed and a further check is clean - not finding an order is not proof it will never arrive.
-+ Suspected token misuse: the user rotates the token in crowdtime API Settings first, then the desk investigates. A token that has appeared in any conversation is burned and must be rotated before the desk trades again.
++ Suspected key misuse: the user deletes the API wallet at `app.strikefinance.org/api-keys` first, then the desk investigates. A private key that has appeared in any conversation, log or receipt is burned and must be replaced before the desk trades again.
 
 Supported versions:
 

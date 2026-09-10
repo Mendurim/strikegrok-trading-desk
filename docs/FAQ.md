@@ -4,7 +4,7 @@
 Seven Bots in your Grok Bot workspace, one Trading Floor group chat, seventeen shared skills, a live zero-key Opening Bell and a written way of working. Ask for a market brief, a sized trade, a backtest or a review, and the right Bot answers with live data and sources.
 
 **What do I need to start?**
-Paste the setup prompt from the [README](../README.md) to any Grok Bot, then send it `Start the desk.` The desk starts in research mode and proves public market access without asking for a credential. Add the crowdtime bearer token only when you decide to trade. There is no useful practice mode in between: Strike's testnet lists four markets with empty books, so it proves plumbing and nothing else. The desk rehearses with dry runs and minimum-size live orders instead.
+Paste the setup prompt from the [README](../README.md) to any Grok Bot, then send it `Start the desk.` The desk starts in research mode and proves public market access without asking for a credential. Register a Strike API wallet only when you decide to trade. There is no useful practice mode in between: Strike's testnet lists four markets with empty books, so it proves plumbing and nothing else. The desk rehearses with dry runs and minimum-size live orders instead.
 
 **What does the desk doctor inspect?**
 The release version and tag pin, all agent and skill files, the desk folders and record, and a public Strike `allMids` response. It never reads environment variables, keys or account state, and never calls the exchange write endpoint.
@@ -19,7 +19,7 @@ The Risk Manager posts a ticket with an id like `SG-20260816-01`. You type `appr
 From you. The Strategist turns your idea into rules and tests it on Strike history with fees, funding and an out-of-sample split; the desk then paper-trades it on testnet if you like. The Market and Research Analysts give you the picture; you decide.
 
 **Why do the Bots use a "computer"?**
-That is Grok Bot's name for the cloud VM every account gets. Reads are plain `curl` against Strike's public Price Service; the Execution Trader posts JSON-RPC to the crowdtime MCP from there, with the bearer token read from the secret store. The browser is only used for reading pages.
+That is Grok Bot's name for the cloud VM every account gets. Reads are plain `curl` against Strike's public Price Service; the Execution Trader runs `scripts/strike_request.py` from there, which signs each call with the API wallet read from the secret store. The browser is only used for reading pages.
 
 **Why six on the floor and one off it?**
 Grok Bot group chats hold six Bots, and reviews are calmer after the noise. The Trade Reviewer works from its own conversation and by DM.

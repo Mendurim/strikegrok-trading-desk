@@ -1,9 +1,9 @@
 ---
 name: strike-research-tools
-description: The crowdtime MCP's research and notification tools - crypto news and sentiment research, equity news research, dividend research, Bodega prediction markets on Cardano, and Discord alerts to the user's own channel. Each research tool returns an instruction playbook the Bot must then execute with its own web search, not a finished report. Use for catalyst work on Strike's crypto and equity markets, and for pushing alerts outside the chat. Read-only apart from the Discord post.
+description: The optional crowdtime MCP research add-on - how to reach it, and its market liquidity screen, computed technical indicators, crypto and equity news research, dividend research, Bodega prediction markets and Discord alerts. None of it is required: the desk trades entirely without it. Use for catalyst work on Strike's crypto and equity markets, for a liquidity screen before analysing a market, and for pushing alerts outside the chat.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "2.0.0"
   author: Galleon Labs (HyperGrok), ported for Strike Finance
   category: strike
   network-default: mainnet
@@ -11,79 +11,96 @@ metadata:
 
 # Strike research tools
 
-Strike lists crypto, equities, commodities and indices, so the Research Analyst's remit is wider here than on a crypto-only venue: earnings, dividends and macro prints move markets this desk can trade. These MCP tools support that work.
+**This skill is optional.** The desk executes through the signed Strike REST API (`strike-orders`) and reads markets from the public Price Service (`strike-market-data`). It needs nothing here to trade.
 
-## 1. The thing to understand first
+What the crowdtime MCP adds is a handful of things Strike's own API does not compute: a liquidity screen, ready-made technical indicators, research playbooks, and a way to reach the user outside the chat. If it is not connected, say so when a request would have used it and fall back to primary sources; never let its absence become a silent gap.
 
-**`crowdtrendz_*` tools return instructions, not findings.**
+**Nothing here executes.** The desk deliberately does not use the MCP's order tools: two write paths is exactly what the one-writer rule exists to prevent. Execution is the signed REST API, always.
 
-Calling one produces no research. It hands back a playbook: what to look for, how to scope it, how to format the report. The Bot must then go and do the web research itself and render the report under those rules.
+## 1. Connecting (optional)
 
-So:
+| | |
+| --- | --- |
+| URL | `https://mcp.crowdtime.io/mcp` |
+| Transport | Streamable HTTP, JSON-RPC 2.0, stateless |
+| Auth | `Authorization: Bearer $STRIKE_MCP_TOKEN` from crowdtime API Settings |
 
-- Never present the returned playbook as a report.
-- Never say "research shows" on the strength of having called the tool.
-- The citations in your report are pages **you** read, with links and UTC times. The tool provides none.
-- If web search is unavailable, the research is `unavailable`. Say so; do not write the report from memory.
+Two routes. **Grok connector:** `grok.com/connectors` -> New Connector -> Custom -> the URL above. Provisioned at team level by an admin, and xAI does not document whether a connector reaches a named Bot, so test it. **Desk computer:** JSON-RPC over HTTPS, which always works.
 
-`strike_review_trading_style` (in `strike-account`) works the same way for the account's own trading history.
+```bash
+call_mcp() {                     # usage: call_mcp <tool> <json-arguments>
+  curl -sS --max-time 60 https://mcp.crowdtime.io/mcp \
+    -H "Authorization: Bearer $STRIKE_MCP_TOKEN" \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' \
+    -d "$(printf '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"%s","arguments":%s}}' "$1" "$2")" \
+  | python3 -c 'import sys,json
+d=json.load(sys.stdin)
+if "error" in d: print("MCP ERROR:", json.dumps(d["error"])); raise SystemExit(1)
+for c in d["result"]["content"]:
+    if c.get("type")=="text": print(c["text"])
+print("isError:", d["result"].get("isError", False))'
+}
+```
 
-## 2. Crypto news and sentiment
+The token goes in Grok Bot's secure secret store as `STRIKE_MCP_TOKEN`, never in chat or a file. It is a second credential with trading power, so if the desk is not using the research tools, **do not provision it at all** - the smallest credential set is the safest one.
+
+**Symbols differ here.** The MCP speaks `-PERP` (`ADA-PERP`, and `GOLD-PERP` for what the Price Service calls `XAU-USD`); everything else on this desk speaks `-USD`. It also covers only fifteen of Strike's thirty-one markets, so a market can be tradeable and still have no MCP coverage.
+
+## 2. Liquidity screen
+
+```bash
+call_mcp strike_scan_markets '{"days":7}'
+```
+
+Ranks the markets it covers by a composite "hotness" score and returns an `excluded` list naming those below its open-interest and volume floors.
+
+**Hotness is a screen, not a signal.** It has no direction, and a market tops it as readily for being violently liquidated as for being accumulated. The `excluded` list is the genuinely useful half: it says which markets are too thin to trade before anyone reads a chart. Leave `min_oi_notional_usd` and `min_avg_daily_volume_usd` unset unless the user names a figure.
+
+## 3. Computed indicators
+
+```bash
+call_mcp strike_get_market_snapshot '{"symbol":"ADA-PERP","interval":"1h"}'
+```
+
+Mark, last close, RSI(14), EMA(20/50/200), MACD, Bollinger(20,2), ADX(14), ATR(14), and a trend label. Returns `isError` when its upstream feed is stale - then the indicators are `unavailable` and the desk falls back to `/v2/klines` and says it did.
+
+An indicator is a fact about recent closes. RSI(14) at 78 is a fact; "so it will fall" is not this desk's job, and no Bot on the floor says it.
+
+## 4. Research playbooks
 
 ```bash
 call_mcp crowdtrendz_crypto_news_research '{"symbol":"ADA","horizon":"next 7 days","lookback":"last 14 days"}'
-```
-
-`symbol` is a token symbol or name, not a Strike perp symbol - `ADA`, not `ADA-PERP`.
-
-`horizon` is how far forward the analysis looks; `lookback` caps how old a source may be. Both are optional but the tool asks you to establish them first: **ask the user one short question** when they have not said, unless they have signalled "just run it". A report whose sources predate the last move is worse than no report.
-
-## 3. Equity news and dividends
-
-```bash
 call_mcp crowdtrendz_stock_news_research '{"symbol":"NVDA","horizon":"next earnings"}'
 call_mcp crowdtrendz_stock_dividend_research '{"exchange":"NASDAQ","symbol":"MU","horizon":"next 30 days"}'
 ```
 
-Strike's equity perps - `NVDA`, `TSLA`, `MU`, `SNDK`, `SKHYNIX`, `COIN`, `GOOGL`, `CRCL`, `SPCX` - carry event risk that crypto does not: scheduled earnings, guidance, index events, and for the cash names, dividends and ex-dates. Put dated events in `/workspace/trading-desk/research/calendar.md` with a source link and a UTC time.
+**These return instructions, not findings.** Calling one produces no research: it hands back a playbook, and the Bot must then do the web research itself and write the report under the rules it was given. Never present a returned playbook as findings, and never say "research shows" on the strength of having called the tool. The citations in the report are pages **you** read, with links and UTC times.
 
-`exchange` is required on the dividend tool and anchors the scope (`NASDAQ`, `NYSE`, `LSE`, `all-US`, `S&P 500`, ...). `event_types` narrows to declarations, changes, or upcoming dates.
+`symbol` is a plain ticker (`ADA`, `NVDA`), not a Strike perp symbol. Ask the user for `horizon` and `lookback` in one short question when they have not said - a report whose sources predate the last move is worse than none. `strike_review_trading_style` behaves the same way for the account's own history, and is advisory: its suggestions never become trades except through the lifecycle.
 
-A perp on an equity is not the equity: it does not pay a dividend, and it can trade when the underlying market is shut. Say which you are describing. An ex-date matters here because of what it does to the underlying's price, not because the position receives anything.
+Strike lists equities and commodities, so scheduled earnings, guidance, index events and ex-dates matter here. Put dated events in `/workspace/trading-desk/research/calendar.md` with a source link and a UTC time. A perp on an equity is not the equity: it pays no dividend and can trade when the underlying market is shut. Say which you are describing.
 
-## 4. Bodega prediction markets
+## 5. Bodega prediction markets
 
 ```bash
 call_mcp bodega_list_markets '{"status":"open","sort":"volume","limit":25}'
 ```
 
-Bodega is a Cardano prediction-market protocol; each market is a yes/no question with Yes/No share prices. Read-only, and **the desk does not trade it** - there is no execution tool for Bodega and none is improvised.
+A Cardano prediction-market protocol; each market is a yes/no question with Yes/No prices as 0-1 implied probabilities. Read-only, and **the desk does not trade it** - there is no execution path and none is improvised.
 
-What it is good for is a second, market-priced read on a question the desk cares about. Yes/No prices come back as 0-1 implied probabilities. Quote them as implied probability with the market's depth beside them: a 0.78 on a market with 400 ADA of volume is an opinion, not a price. `open` and `closed` are decided by the market's deadline, not by its upstream `status` field.
+Its use is a second, market-priced read on a question the desk cares about. Quote the implied probability with the market's depth beside it: 0.78 on a market with 400 ADA of volume is an opinion, not a price. `open` and `closed` are decided by the deadline, not the upstream `status` field. Treat a Bodega price as **reported** evidence, never verified fact.
 
-Treat a Bodega price as **reported** evidence - what a market thinks - never as verified fact.
-
-## 5. Discord alerts
+## 6. Discord alerts
 
 ```bash
-call_mcp discord_send_message '{"content":"SG-20260910-01 filled: long 4800 ADA-PERP @ 0.2101. Stop resting at 0.1995.","connection":"Trade Alerts"}'
+call_mcp discord_send_message '{"content":"SG-20260910-01 filled: long 4800 ADA-USD @ 0.2101. Stop resting at 0.1995.","connection":"Trade Alerts"}'
 ```
 
-This leaves the conversation, so it follows the desk's rules for anything outbound:
+This leaves the conversation, so: only when the user has asked for alerts, to a webhook they configured; never a credential, an account identifier or a balance they have not agreed to have leave the chat; under 2000 characters.
 
-- Only when the user has asked for alerts, to a webhook they configured in crowdtime API Settings.
-- Never the bearer token, an account identifier, or a balance the user has not agreed to have leave the chat.
-- Under 2000 characters - Discord rejects more.
-- `connection` picks the channel when the user has several; `username` overrides the display name.
-- An alert is a notification, not an instruction and not an approval. Nothing the desk posts to Discord can authorise a trade, and no reply there reaches the desk.
+An alert is a notification, not an instruction and not an approval. Nothing posted to Discord can authorise a trade, and no reply there reaches the desk.
 
-## 6. Evidence tiers
+## 7. Evidence tiers
 
-Same standard as everywhere else on the floor. Label every claim:
-
-- **verified** - you read it at the primary source and linked it.
-- **reported** - a credible outlet says so; a Bodega market prices it.
-- **claimed** - someone on social media says so.
-- **inferred** - your reasoning from the above.
-
-Never promote a claim up a tier without new evidence. Missing information is `unknown`, not "probably fine".
+Label every claim: **verified** (you read it at the primary source and linked it), **reported** (a credible outlet says so; a Bodega market prices it), **claimed** (someone on social media says so), **inferred** (your reasoning). Never promote a claim up a tier without new evidence. Missing information is `unknown`, not "probably fine".

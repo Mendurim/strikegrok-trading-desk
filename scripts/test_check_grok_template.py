@@ -42,7 +42,7 @@ def wrong_release(root):
 
 def missing_skill(root):
     edit(root, lambda data: data["skills"].pop())
-    return "exactly the 18 repository skills"
+    return "exactly the 19 repository skills"
 
 
 def stale_hash(root):

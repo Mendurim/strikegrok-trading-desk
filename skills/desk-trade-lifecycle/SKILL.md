@@ -25,7 +25,7 @@ idea -> evidence -> risk sign-off -> user approval -> execution -> reconciliatio
 # SG-20260816-01
 
 - opened: 2026-08-16 14:02 UTC by user
-- market: ETH-PERP  network: mainnet  account: 0xabc...def
+- market: ETH-USD  network: mainnet  account: 0xabc...def
 - idea: long ETH on a retest of 3,000 with invalidation below 2,900 (user's idea)
 - status: evidence
 
@@ -55,12 +55,12 @@ A PASS produces the **ticket**:
 
 ```
 TICKET SG-20260816-01 | mainnet | account 0xabc...def
-market: ETH-PERP (asset 1)      side: buy      size: 0.4827 ETH (~$1,448)
+market: ETH-USD (asset 1)      side: buy      size: 0.4827 ETH (~$1,448)
 entry: limit 3,000.0 Gtc        reduce-only: no
-stop: sell 0.4827 trigger 2,900 market (worst 2,755, 5% bound), normalTpsl with the entry
+stop: sell 0.4827 trigger 2,900 market (worst 2,755, 5% bound), as one strategy order with the entry
 take-profit: none               leverage: 3x cross (set before entry if different)
 slippage tolerance: 10 bps from ticket price at send time
-risk: $51.00 = 0.5% of equity $10,200.00 (strike_get_account_balance 14:11 UTC), R = 100 USD/ETH
+risk: $51.00 = 0.5% of equity $10,200.00 (GET /v2/account 14:11 UTC), R = 100 USD/ETH
 sizing: stressed distance 105.65 USD/ETH (stop 100 + slippage 3.00 + fees 2.65)
 risk sign-off: PASS 14:12 UTC, risk-limits.md v3
 expires: 14:42 UTC
@@ -79,11 +79,11 @@ If the ticket expires before approval, it is void; a fresh Risk sign-off is need
 
 ## 4. Execution
 
-**Owner: Execution Trader.** Runs the pre-send checklist in `desk-execution-protocol`, sends the ticket as one action, and records the dry-run preview, the confirmed request, the returned order id, the LIVE STATUS line and timestamps under `## execution`. Anything other than a clean response is handled per `desk-incident-response`.
+**Owner: Execution Trader.** Runs the pre-send checklist in `desk-execution-protocol`, sends the ticket as one action, and records the preview block, the client order id, the request as sent, the numeric order id, the status read back from the exchange and the timestamps under `## execution`. Anything other than a clean response is handled per `desk-incident-response`.
 
 ## 5. Reconciliation
 
-**Owner: Execution Trader.** Confirms from the exchange record - `strike_get_open_orders`, `strike_get_order_history`, `strike_get_fill_history`, `strike_get_open_positions` - what happened, and writes it under `## reconciliation`. Posts the execution report on the floor and DMs the Trade Reviewer. Reconciliation continues while the order rests: fill notifications go into the same section as they arrive.
+**Owner: Execution Trader.** Confirms from the exchange record - `GET /v2/openOrders`, `GET /v2/history/order`, `GET /v2/history/fill`, `GET /v2/positions` - what happened, and writes it under `## reconciliation`. Posts the execution report on the floor and DMs the Trade Reviewer. Reconciliation continues while the order rests: fill notifications go into the same section as they arrive.
 
 ## 6. Review
 

@@ -2,7 +2,7 @@
 
 StrikeGrok Trading Desk is a port of **[HyperGrok Trading Desk](https://github.com/galleonlabs/hypergrok-trading-desk)**, created by **Andrew Wilkinson and Galleon Labs** and released under the [MIT license](LICENSE).
 
-The seven-role desk design, the trade lifecycle, the ticket and proposal formats, the evidence standard, the `unavailable` verdict and the eight `desk-*` process skills are theirs. This repository replaces the Hyperliquid integration with Strike Finance market data and crowdtime MCP execution, and keeps everything else.
+The seven-role desk design, the trade lifecycle, the ticket and proposal formats, the evidence standard, the `unavailable` verdict and the eight `desk-*` process skills are theirs. This repository replaces the Hyperliquid integration with Strike Finance market data and signed Strike API execution, and keeps everything else.
 
 Both projects are MIT licensed. The original copyright and permission notice is retained in [`LICENSE`](LICENSE) and beside every skill.
 
@@ -29,4 +29,4 @@ If you reused only part of it, say which part - a skill, the agent prompts, the 
 
 ## Credit for the Strike port
 
-The Strike Finance integration in this repository - the nine `strike-*` skills, the crowdtime MCP transport, the ported Opening Bell and desk doctor - is offered under the same MIT terms. No separate credit is required beyond the notice above.
+The Strike Finance integration in this repository - the ten `strike-*` skills, the signed-request helper, the ported Opening Bell and desk doctor - is offered under the same MIT terms. No separate credit is required beyond the notice above.

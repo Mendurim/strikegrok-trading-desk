@@ -8,7 +8,7 @@
 
 Add the Desk Lead to [Grok Bot](https://grok.com). It opens with a live, zero-key Strike market snapshot, builds research, risk, execution and review as separate agents, then proves the floor is ready. They brief you on markets, size your trades, send what you approve and tell you honestly how it went. You bring the ideas. Let them cook.
 
-Market data comes from Strike's **public REST Price Service**. Execution goes through the **crowdtime MCP**. Two surfaces, one desk.
+Market data comes from Strike's **public REST Price Service**; execution goes through the **signed Strike API** with an Ed25519 API wallet you register yourself. Same symbols on both, all thirty-one markets tradeable.
 
 ## Start
 
@@ -37,7 +37,7 @@ It reports source and UTC time, mid/mark/index, 24-hour change and range, hourly
 | **Research Analyst** | What is happening and what is scheduled. Strike lists equities and commodities as well as crypto, so earnings, dividends and macro count here. |
 | **Strategist** | Turns your idea into explicit rules, backtests it honestly on Strike history, and stress-tests it before a cent is risked. |
 | **Risk Manager** | Keeps your written limits, sizes every trade from your live account, watches the book, and can say no. |
-| **Execution Trader** | The one Bot with the token. Previews every order, sends the ticket you approved once, and reconciles it from the exchange record. |
+| **Execution Trader** | The one Bot with the key. Previews every order, sends the ticket you approved once, and reconciles it from the exchange record. |
 | **Trade Reviewer** | Keeps the desk journal and grades every trade on process and outcome, separately. |
 
 Six sit together on the **Trading Floor** group chat; the Trade Reviewer works by DM. Every trade follows the same path:
@@ -53,15 +53,15 @@ idea -> evidence -> risk sign-off -> your approval -> dry run -> one send -> rec
 **"I want to long ADA at 0.21 with a stop at 0.1995."** The Desk Lead opens `SG-20260910-01`, the Risk Manager reads your account live through the MCP and comes back with a ticket:
 
 ```
-TICKET SG-20260910-01 | ADA-PERP
-market ADA-PERP  side long  size 4800 ADA (~$1,008)
+TICKET SG-20260910-01 | ADA-USD
+market ADA-USD  side long  size 4800 ADA (~$1,008)
 entry limit 0.2100 GTC    stop 0.1995 market (attached to the entry as one bracket)
 risk $51.00 = 0.5% of equity $10,200 (strike_get_account_balance 14:11 UTC)
 sized on a stressed stop: 0.0105 + slippage + fees per ADA
 approve with: "approve SG-20260910-01"
 ```
 
-You type `approve SG-20260910-01`. The Execution Trader runs the dry run first, reads the preview back, then sends once with `confirm=true`, and reports the exchange's **LIVE STATUS** line — not "sent". When it closes, the Trade Reviewer tells you what it cost, whether the process was clean, and one thing worth keeping.
+You type `approve SG-20260910-01`. The Execution Trader posts the exact request body as a preview, sends that same file once, then reads the order back from the exchange by its client order id and reports what the exchange says — not "sent". When it closes, the Trade Reviewer tells you what it cost, whether the process was clean, and one thing worth keeping.
 
 **"Is anything scheduled for NVDA?"** The Research Analyst pulls the research playbook, does the web work itself, and comes back with a sourced catalyst list — because on Strike you can trade the equity perp.
 
@@ -78,7 +78,7 @@ Eighteen skills, in the portable `SKILL.md` format, shared by all your Bots.
 ## Built for real money
 
 - **You approve every trade**, by ticket id, after seeing the exact order. The line you type is evidence; the gate that enforces it sits outside the chat, in Grok Bot's own Require Approval rule, because a Bot that can read an approval could also write one.
-- **Every write tool is dry-run by default.** Nothing reaches the exchange without `confirm=true`, so the desk previews every order and reads it back to you before it sends. That gate lives in the transport, not in a Bot's good behaviour.
+- **Every order is previewed before it is sent.** The desk builds the exact request as a file, posts it to you verbatim, and sends that same file. The bytes you approved are the bytes that go.
 - **Sized on a stressed stop.** A triggered stop is a market order: it slips and pays taker on both legs. The desk sizes on what the stop will actually cost, not its trigger price, so your risk budget means what it says.
 - **Ceilings you cannot trade through.** Your limits file may only tighten the desk's own caps, never loosen them, and the MCP enforces a per-symbol leverage cap no Bot can bypass.
 - **One writer.** Six Bots read; one Bot sends, once per approval, and reconciles from the exchange record.
@@ -86,15 +86,15 @@ Eighteen skills, in the portable `SKILL.md` format, shared by all your Bots.
 
 ### Two things this desk is honest about
 
-**The token can move money.** Unlike a Hyperliquid API wallet, which can trade but cannot withdraw, the crowdtime bearer token is a single credential whose full powers the desk must assume include moving funds. Keep on Strike only what you intend the desk to trade, store the token in Grok Bot's secure secret store, and rotate it if it is ever exposed.
+**Strike has no dry-run mode.** The MCP-based version of this desk had one in the transport; the direct API does not. The desk replaces it with a preview block: every request is built as a file, posted to you verbatim, and that same file is sent. It is a discipline rather than a gate, so the Require Approval rule in Grok Bot matters more, not less.
 
-**An unverified send cannot be proven dead.** Hyperliquid's `expiresAfter` let a desk prove a lost order could never arrive. Strike's MCP offers no order expiry and no client order id on placement, so when a send comes back `unverified` the desk freezes, reads the record, and hands the decision to you. It will not guess, and it will not resend.
+**Strike has no order expiry.** Hyperliquid's `expiresAfter` let a desk prove a lost order could never arrive; nothing here does that. What the desk has instead is a `client_order_id` it chooses before every send, and an endpoint that answers whether that exact order exists - so a lost response is a lookup, not a guess. A replacement always gets a fresh id.
 
 Perpetual futures can liquidate an account. StrikeGrok is documentation and instructions, not financial advice.
 
 ## Also runs in Grok Build, Cursor and Claude Code
 
-The same `agents/`, `skills/` and `rules/` load as a plugin: eighteen skills, and the seven roles as subagents.
+The same `agents/`, `skills/` and `rules/` load as a plugin: nineteen skills, and the seven roles as subagents.
 
 In Claude Code, install it from this repository:
 
@@ -120,7 +120,7 @@ Either way, run `/desk-operating-model` to begin.
 ```
 SETUP.md     what your Grok Bot follows to build the desk
 agents/      seven roles: Bot profile card + full system prompt
-skills/      eighteen skills (bootstrap, strike-*, desk-*)
+skills/      nineteen skills (bootstrap, strike-*, desk-*)
 template/    exact public Grok Bot profile and skill hashes
 scripts/     zero-key Opening Bell, desk doctor and release checks
 docs/        how it works, FAQ, provenance
@@ -141,6 +141,6 @@ assets/      the mascot - use it as your Bots' avatar
 
 [MIT licensed](LICENSE), with the copyright and permission notice retained when reusing copies or substantial portions.
 
-StrikeGrok is a port of [HyperGrok Trading Desk](https://github.com/galleonlabs/hypergrok-trading-desk) by [Andrew Wilkinson](https://andrewwilkinson.io) and [Galleon Labs](https://github.com/galleonlabs), which built the seven-role desk design, the trade lifecycle and the evidence standard this repository keeps. The Hyperliquid integration has been replaced with Strike Finance market data and crowdtime MCP execution; the desk's process is theirs.
+StrikeGrok is a port of [HyperGrok Trading Desk](https://github.com/galleonlabs/hypergrok-trading-desk) by [Andrew Wilkinson](https://andrewwilkinson.io) and [Galleon Labs](https://github.com/galleonlabs), which built the seven-role desk design, the trade lifecycle and the evidence standard this repository keeps. The Hyperliquid integration has been replaced with Strike Finance market data and signed Strike API execution; the desk's process is theirs.
 
 See [reuse and attribution](ATTRIBUTION.md) for a ready-to-copy credit line.

@@ -37,20 +37,20 @@ Interview the user, one question at a time, then write `/workspace/trading-desk/
 # Risk limits v1 - 2026-08-16 - set by user
 
 - network: testnet            # testnet | mainnet
-- account: the Strike account the crowdtime token acts for
-- equity basis: equity from strike_get_account_balance, read live (USD)
+- account: the Strike account the API wallet acts for
+- equity basis: equity from GET /v2/account, read live (USD)
 - max risk per trade: 0.5% of equity      # loss if the stop is hit
 - max total open risk: 2% of equity       # sum of risk-to-stop across open positions
 - max leverage per market: 3x             # never above the exchange max, and never above this
 - max positions: 3
-- allowed markets: BTC-PERP, ETH-PERP, ADA-PERP, SOL-PERP   # MCP symbols; must be in the tradeable fifteen
+- allowed markets: BTC-USD, ETH-USD, ADA-USD, SOL-USD       # must have status=trading in /v2/exchangeInfo
 - stops: mandatory on every entry, on the exchange, not "mental"
 - daily loss stop: -2% of start-of-day equity -> no new risk until the user resets in writing
 - max slippage tolerance at send: 10 bps  # Execution Trader stops if mid moved further
 - correlated cluster limit: majors (BTC, ETH, SOL) count as one cluster; max 2 positions per cluster
 - standing approvals: none          # recommended: protective stops (reduce-only), any network
 - unprotected position deadline: 15m  # then tell the user to fix it in the Strike app
-- taker fee assumption: 0.045%        # the MCP exposes no fee endpoint; record the figure and its source
+- taker fee assumption: 0.045%        # record the figure and its source; correct it against realised fills
 - notes:
 ```
 
@@ -62,9 +62,9 @@ Inputs you need before you start: entry price, stop price, side, market, the cur
 
 ### 2.1 Read live state (never from memory)
 
-- Account: `strike_get_account_balance` for equity, balances and margin usage (all USD); `strike_get_open_positions` for size, entry, leverage, margin used, unrealised PnL and liquidation price; `strike_get_open_orders` for what is already resting, including untriggered protection. Skill: `strike-account`.
-- Market constraints: `strike_get_market_snapshot` for `tick_size`, `size_precision`, `min_notional_usd` and `max_leverage` in MCP symbols; `/v2/exchangeInfo` for the same in REST symbols plus `liquidationFee`. Skill: `strike-market-data`.
-- Price and depth: `strike_get_mark_price` for the mark that liquidation and PnL settle against; `/v2/depth?limit=1000` depth bands from the Market Analyst's evidence.
+- Account: `GET /v2/account` for equity, balances and margin usage (all USD); `GET /v2/positions` for size, entry, leverage, margin used, unrealised PnL and liquidation price; `GET /v2/openOrders` for what is already resting, including untriggered protection. Skill: `strike-account`.
+- Market constraints: `/v2/exchangeInfo` for `PRICE_FILTER.tickSize`, `LOT_SIZE.stepSize`, `MIN_NOTIONAL.notional` and `liquidationFee`. Skill: `strike-market-data`.
+- Price and depth: `/v2/markPrice` for the mark that liquidation and PnL settle against; `/v2/depth?limit=1000` depth bands from the Market Analyst's evidence.
 - Day PnL: start-of-day equity from the journal, current equity now.
 
 ### 2.2 Arithmetic (show every line in the PASS)
@@ -76,8 +76,9 @@ slip_stop         = assumed slippage on a triggered stop, in price units
                     (at least the market's current spread; widen it on thin /v2/depth depth for this size)
 stop_fill         = stop - slip_stop  (long)   |   stop + slip_stop  (short)
 taker_fee         = the taker rate recorded in risk-limits.md (a stop is a market exit; it pays taker)
-                    the MCP exposes no fee endpoint, so this is a written assumption, not a read -
-                    state it in the PASS, and correct it from realised fees in strike_get_fill_history
+                    a written assumption until the desk has fills to check it against - state it in
+                    the PASS, and correct it from realised fees in GET /v2/history/fill and
+                    GET /v2/history/transaction (type 3)
 fees_per_unit     = (entry + stop_fill) x taker_fee    (entry leg and exit leg)
 stressed_distance = |entry - stop_fill| + fees_per_unit
 raw_size          = risk_usd / stressed_distance       (never risk_usd / stop_distance)
@@ -85,7 +86,7 @@ size              = round_down(raw_size, size_precision)   (never round up)
 notional          = size x entry
 check             notional >= min_notional_usd         (10 USD across Strike's markets)
 check             size >= 1 step at size_precision     (else REJECT: risk budget too small for this stop)
-                  ADA-PERP is whole tokens (0dp) - the commonest cause of this reject
+                  ADA-USD is whole tokens (0dp) - the commonest cause of this reject
 max_lev_here      = min(ceiling 20x, limits.max_leverage, market max_leverage, MCP per-symbol cap)
 margin_needed     = notional / requested_leverage      (requested_leverage <= max_lev_here)
 check             margin_needed <= free_margin x 0.8   (20% headroom; tighter if the user says so)
@@ -107,9 +108,9 @@ The stress is a sizing input, not a promise. A gap through the stop can still ex
 
 ### 2.3 Leverage caps and notional headroom
 
-Three ceilings apply to leverage and the lowest wins: the user's `max_leverage` in the limits file, the market's own `max_leverage` from `strike_get_market_snapshot`, and the **MCP's per-symbol cap**, which the server enforces and no Bot can bypass. Name the binding one in the PASS.
+Two ceilings apply to leverage and the lower wins: the user's `max_leverage` in the limits file, and the market's own maximum. Name the binding one in the PASS.
 
-Strike also limits notional by leverage. `strike_set_leverage` returns `maxNotionalValue` at the leverage it just set - that figure is the headroom the ticket must fit inside, and it is the closest thing this venue exposes to a margin tier. Where a ticket is large relative to the account, set leverage first, read `maxNotionalValue`, and size against it rather than assuming the headline leverage holds all the way up.
+Strike also limits notional by leverage. `POST /v2/leverage` returns the maximum notional at the leverage it just set - that figure is the headroom the ticket must fit inside, and it is the closest thing this venue exposes to a margin tier. Where a ticket is large relative to the account, set leverage first, read that figure back, and size against it rather than assuming the headline leverage holds all the way up.
 
 Liquidation price comes back on the position itself once it exists; `liquidationFee` per market comes from `/v2/exchangeInfo` and is part of what a liquidation actually costs. Check both after the fact and report the distance from mark to liquidation in price and percent.
 
@@ -119,7 +120,7 @@ PASS: the block in `agents/risk-manager.md` (inputs, sizing, leverage and tier, 
 
 ## 3. Book check ("how's the book")
 
-From `strike_get_account_balance`, `strike_get_open_positions`, `strike_get_open_orders` and `strike_get_mark_price`:
+From `GET /v2/account`, `GET /v2/positions`, `GET /v2/openOrders` and `/v2/markPrice`:
 
 - equity, free margin, margin usage and ratio, and the distance from mark to liquidation per position in price and percent
 - positions: symbol, side, size, entry, mark, unrealised PnL, leverage and mode, margin used
@@ -127,7 +128,7 @@ From `strike_get_account_balance`, `strike_get_open_positions`, `strike_get_open
 - protection: for each position, is there a reduce-only stop resting (a trigger order on the correct side - `short` protects a long - sized at or above the position)? Trigger orders that have not fired report as status **5 untriggered**, not 2 open; a check that counts only status 2 will call a protected position unprotected. If there is genuinely none: **unprotected**, flagged as an incident to the Desk Lead
 - open orders that no longer belong to a position (orphans)
 - day PnL versus the daily loss stop
-- funding paid so far today, derived from the hourly rate in `/v2/premiumIndex` and the position's size and holding hours, shown as arithmetic rather than quoted as a read
+- funding paid so far today, read from `GET /v2/history/funding` - the amount actually charged, not a rate multiplied by a guess at hours
 
 Timestamp everything. Save a copy under `/workspace/trading-desk/briefs/YYYY-MM-DD-book.md` when the user asks for a written check.
 

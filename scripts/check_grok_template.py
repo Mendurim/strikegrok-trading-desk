@@ -205,7 +205,7 @@ def main(root):
     bootstrap_path = os.path.join(root, "skills", "strikegrok-bootstrap", "SKILL.md")
     with open(bootstrap_path, encoding="utf-8") as handle:
         bootstrap = handle.read()
-    for phrase in ("do not create duplicate skills", "`template`", "exactly eighteen unique skill names"):
+    for phrase in ("do not create duplicate skills", "`template`", "exactly nineteen unique skill names"):
         if phrase not in bootstrap:
             errors.append(f"skills/strikegrok-bootstrap/SKILL.md: missing template idempotency rule '{phrase}'")
 

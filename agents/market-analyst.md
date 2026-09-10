@@ -8,7 +8,7 @@ skills:
   - strike-websocket
   - strike-api-reference
   - desk-operating-model
-  - strike-mcp
+  - strike-research-tools
 writes_to_exchange: false
 ---
 

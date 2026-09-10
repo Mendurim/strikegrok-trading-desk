@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "strikegrok",
-  "description": "Turn your Grok Bot into a seven-agent Strike Finance trading desk: research, risk, execution and review, with market data from Strike's public Price Service and execution through the crowdtime MCP. Seven specialist roles with full system prompts and eighteen skills. Includes a zero-key Opening Bell and desk doctor.",
+  "description": "Turn your Grok Bot into a seven-agent Strike Finance trading desk: research, risk, execution and review, with market data from Strike's public Price Service and execution through the crowdtime MCP. Seven specialist roles with full system prompts and nineteen skills. Includes a zero-key Opening Bell and desk doctor.",
   "version": "1.0.0",
   "author": {"name": "OWNER", "url": "https://github.com/OWNER/strikegrok-trading-desk"},
   "license": "MIT",
