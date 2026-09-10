@@ -1,13 +1,36 @@
 # Provenance
 
-Everything here is original prose and original snippets, written against public documentation and open-source SDK code and verified against the live API on 2026-08-16.
+## What this repository is
+
+StrikeGrok is a port of [HyperGrok Trading Desk](https://github.com/galleonlabs/hypergrok-trading-desk) v1.4.3 by Andrew Wilkinson and Galleon Labs, MIT licensed.
+
+**Taken from HyperGrok, largely unchanged:** the seven agent roles and their system prompts, the eight `desk-*` process skills, the trade lifecycle and ticket format, the proposal and journal formats, the evidence standard and the `unavailable` verdict, the repository layout, and the `scripts/check*.py` release checks. The venue-specific mechanics inside those files were rewritten; the process they describe is Galleon Labs' design.
+
+**Written for this port:** the nine `strike-*` skills, `skills/strikegrok-bootstrap`, the rewritten `scripts/opening_bell.py`, the Strike half of `scripts/desk_doctor.py`, and the venue-specific sections of `desk-execution-protocol` and `desk-risk-limits`.
+
+## Sources
+
+Verified against the live APIs on 2026-09-10.
 
 | Source | Used for | Licence |
 | --- | --- | --- |
-| [Strike docs](https://strike.gitbook.io/strike-docs) | every endpoint, action, field, limit and error string in the `strike-*` skills | public docs |
-| [strike-python-sdk](https://github.com/strike-dex/strike-python-sdk) 0.24.0 | Python calls in the skills; the SDK the desk installs | MIT |
-| [@nktkas/strike](https://github.com/nktkas/strike) 0.33.3 | TypeScript calls and formatting helpers | MIT |
-| [Grok Bot docs](https://docs.x.ai/grok-bot), [Cursor help](https://cursor.com/help/grok-bot) | Bots, group chats, shared computer, skills, routines, approvals, secrets | public docs |
-| [Grok Build skills and plugins](https://docs.x.ai/build/features/skills-plugins-marketplaces), [Agent Skills spec](https://agentskills.io) | plugin layout and `SKILL.md` conventions | public docs |
-| [Senpi skills](https://github.com/Senpi-ai/senpi-skills), [cezar-r/strike-skills](https://github.com/cezar-r/strike-skills), [Hermes strike skill](https://github.com/NousResearch/hermes-agent/tree/main/optional-skills/blockchain/strike) | structure survey only; nothing reused | MIT / Apache-2.0 declarations |
-| kaileycompact51/HyperLiquid-Claw | reviewed and not used; it distributes an unverified Windows binary and an obfuscated install script | claimed MIT |
+| [Strike Market Data API OpenAPI spec](https://github.com/strike-finance/strike-finance-skills/blob/main/openapi/market-api.yaml) | every REST endpoint, parameter, default and field in `strike-market-data` and `strike-api-reference` | MIT |
+| `https://api.strikefinance.org/price/v2` (live) | market list, per-symbol filters, depth behaviour and the `limit` default of 20, funding cadence, response shapes | public API |
+| `https://api-v2-testnet.strikefinance.org/price/v2` (live) | the four testnet markets and their empty books - the basis for the rehearsal rule in `strike-setup` | public API |
+| `https://mcp.crowdtime.io/mcp` `tools/list` (live) | the twenty-two tool names, descriptions and argument schemas in `strike-mcp`, `strike-orders`, `strike-account`, `strike-positions` and `strike-research-tools` | the server's own declaration |
+| `strike_scan_markets` (live, read-only) | the fifteen tradeable markets and the liquidity floors | the server's own response |
+| `strike_get_mark_price` on `GOLD-PERP` vs REST `XAU-USD` (live) | confirming the symbol map, including that gold is the one pair that is not a suffix swap | cross-check |
+| [Strike Finance docs](https://docs.strikefinance.org) | product context | public docs |
+| [strike-finance/strike-finance-skills](https://github.com/strike-finance/strike-finance-skills) | structure survey and the OpenAPI specs above; no skill text reused | MIT |
+| [Grok connectors](https://docs.x.ai/grok/connectors), [connector management](https://docs.x.ai/grok/connector-management) | the two routes to the MCP in `strike-mcp`, and the caveat that connectors are team-level and undocumented for Bots | public docs |
+| HyperGrok's Grok Bot findings | Bots, group chats of six, shared computer, shared skills, routines, approvals, secret store | inherited from the upstream repository |
+
+## Deliberately not used
+
+- **Strike's Ed25519 API-wallet REST auth** (`X-API-Wallet-*` headers), documented in `strike-finance-skills`. This desk executes through the crowdtime MCP instead, so it holds a bearer token rather than a signing key. The REST surface it does use is the unauthenticated Price Service.
+- **The crowdtime MCP's OAuth flow** (dynamic client registration, PKCE). Available at the endpoint, but a static bearer token from crowdtime API Settings is simpler and works identically from both routes.
+- **`@nktkas/hyperliquid` and `hyperliquid-python-sdk`**, which HyperGrok installed. Nothing in this port needs an SDK: reads are `curl`, writes are a JSON-RPC POST. The desk computer installs no packages.
+
+## Claims this repository does not make
+
+No tool here was benchmarked, and no strategy is shipped. The `strike_scan_markets` "hotness" score and the indicators in `strike_get_market_snapshot` are the server's computations, reported as such; the skills say explicitly that neither is a signal. Figures in worked examples are illustrative, not results.
