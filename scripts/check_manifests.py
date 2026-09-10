@@ -50,7 +50,10 @@ CLONE_BRANCH_RE = re.compile(r"--branch(?:=|\s+)([^\s`]+)")
 VERSION_TAG_RE = re.compile(r"\bv\d+\.\d+\.\d+\b")
 # `CHANGELOG.md` records every past release and `CONTRIBUTING.md` documents the
 # release procedure against historical tags; both name old versions by design.
-RELEASE_HISTORY_DOCS = ("CHANGELOG.md", "CONTRIBUTING.md")
+# Documents that legitimately name a release other than this one: change history,
+# and the provenance record, which names the upstream HyperGrok release this
+# desk was ported from.
+RELEASE_HISTORY_DOCS = ("CHANGELOG.md", "CONTRIBUTING.md", "docs/PROVENANCE.md")
 
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
