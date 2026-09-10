@@ -35,7 +35,7 @@ class DeskDoctorTest(unittest.TestCase):
         for name in self.AGENTS:
             open(os.path.join(root, "agents", f"{name}.md"), "w", encoding="utf-8").close()
         os.makedirs(os.path.join(root, "scripts"))
-        for name in ("check.sh", "desk_doctor.py", "opening_bell.py"):
+        for name in ("check.sh", "desk_doctor.py", "opening_bell.py", "strike_request.py"):
             open(os.path.join(root, "scripts", name), "w", encoding="utf-8").close()
         self.write_template(root)
 

@@ -79,6 +79,15 @@ PKCS8_ED25519_PREFIX = bytes.fromhex("302e020100300506032b657004220420")
 
 
 def sign_with_openssl(message: bytes, seed: bytes) -> str:
+    """Sign with the openssl CLI, for a computer with no `cryptography` package.
+
+    `openssl pkeyutl -rawin` cannot sign a zero-length message ("Could not
+    allocate 0 bytes"), where the library backend can. The desk never signs one -
+    every message is at least `GET:/path:...` - so the two backends agree on
+    every input this script actually produces, which is what the tests pin down.
+    """
+    if not message:
+        raise SystemExit("openssl cannot sign an empty message; this should be unreachable")
     der = PKCS8_ED25519_PREFIX + seed
     with tempfile.TemporaryDirectory() as tmp:
         key_path = os.path.join(tmp, "k.der")
@@ -126,6 +135,10 @@ def request(base_url: str, method: str, path: str, body: str, query: list[str], 
     seed = bytes.fromhex(read_key("STRIKE_API_PRIVATE_KEY"))
     headers = auth_headers(method, path, body, public_key, seed)
     headers["Accept"] = "application/json"
+    # Cloudflare in front of the API bans urllib's default User-Agent outright
+    # (error 1010), so every request must name itself. Without this the desk
+    # gets a 403 that looks nothing like an auth problem.
+    headers["User-Agent"] = "strikegrok-desk/1.0"
     if body:
         headers["Content-Type"] = "application/json"
     url = f"{base_url.rstrip('/')}{path}"

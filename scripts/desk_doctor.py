@@ -167,7 +167,8 @@ def check_repository(root: str) -> list[Check]:
     except OSError as exc:
         checks.append(Check("FAIL", "setup pin", f"cannot read SETUP.md: {exc}"))
 
-    required = ("scripts/check.sh", "scripts/desk_doctor.py", "scripts/opening_bell.py", "skills/strikegrok-bootstrap/SKILL.md")
+    required = ("scripts/check.sh", "scripts/desk_doctor.py", "scripts/opening_bell.py",
+                "scripts/strike_request.py", "skills/strikegrok-bootstrap/SKILL.md")
     missing = [path for path in required if not os.path.isfile(os.path.join(root, path))]
     checks.append(result(not missing, "release files", "bootstrap, doctor and demo present", f"missing: {', '.join(missing)}"))
     return checks
