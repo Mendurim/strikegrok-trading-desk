@@ -55,6 +55,7 @@ import os
 import re
 import stat
 import sys
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -74,6 +75,8 @@ except Exception:  # pragma: no cover - only on a desk without the package
 CEILING_MAX_NOTIONAL_PER_ORDER_USD = 5_000.0
 CEILING_MAX_NOTIONAL_EQUITY_MULT = 1.0         # one order may not exceed the account
 CEILING_MAX_BAR_SECONDS = 86_400               # an SA's bar may not be longer than a day
+CEILING_MAX_SIGNAL_AGE_SECONDS = 3_600         # and a fire is never acted on more than an hour late
+RESERVATION_GRACE_SECONDS = 300                # how long a slot is held before the venue must show it
 CEILING_MAX_LEVERAGE = 5
 CEILING_MAX_DAILY_LOSS_FRACTION = 0.03
 CEILING_MAX_OPEN_PER_SA = 3
@@ -99,6 +102,7 @@ def effective_ceilings() -> dict:
         "SA_MAX_LIFETIME_DAYS": _ceiling("SA_MAX_LIFETIME_DAYS", CEILING_SA_MAX_LIFETIME_DAYS),
         "MAX_CONSECUTIVE_LOSSES": _ceiling("MAX_CONSECUTIVE_LOSSES", CEILING_MAX_CONSECUTIVE_LOSSES),
         "MAX_BAR_SECONDS": _ceiling("MAX_BAR_SECONDS", CEILING_MAX_BAR_SECONDS),
+        "MAX_SIGNAL_AGE_SECONDS": _ceiling("MAX_SIGNAL_AGE_SECONDS", CEILING_MAX_SIGNAL_AGE_SECONDS),
         "SECONDS_BETWEEN_OPENS": _floor("SECONDS_BETWEEN_OPENS", FLOOR_SECONDS_BETWEEN_OPENS),
     }
 
@@ -185,6 +189,23 @@ def _num(value: Any, what: str) -> float:
     except (TypeError, ValueError):
         raise PolicyRefusal(f"{what}: '{value}' is not a number")
     if out != out or out in (float("inf"), float("-inf")):
+        raise PolicyRefusal(f"{what}: '{value}' is not finite")
+    return out
+
+
+def _dec(value: Any, what: str) -> Decimal:
+    """Exact decimal, for comparing a ticket's numbers with a request's.
+
+    Sizes and prices are strings on the wire because a venue's tick and step are
+    decimal, not binary. Comparing them as floats means "0.1" and a float that
+    prints as 0.1 are the same number only by luck and a tolerance; Decimal makes
+    the equality the one the exchange will actually apply.
+    """
+    try:
+        out = Decimal(str(value).strip())
+    except (InvalidOperation, ValueError, AttributeError):
+        raise PolicyRefusal(f"{what}: '{value}' is not a decimal number")
+    if not out.is_finite():
         raise PolicyRefusal(f"{what}: '{value}' is not finite")
     return out
 
@@ -602,8 +623,11 @@ class Policy:
                         f"SA: {ticket_id} claims {f['sa']} but this desk has no "
                         "desk/user-signing.pub, so no standing approval can be verified; run "
                         "desk_policy.py keygen on your own machine and install the public key")
+                self._log("WARN", "att", "unsigned open: no user-signing.pub on this desk", body)
                 record = {"allow": True, "tier": "attended", "ticket": ticket_id,
-                          "why": "ticket matches a Risk PASS; approval is the platform gate and the user"}
+                          "why": "ticket matches a Risk PASS. NOTHING HERE VERIFIED AN APPROVAL: "
+                                 "the only approval control is the platform's Require Approval rule, "
+                                 "which a Bot running this script directly does not pass through"}
             elif f.get("sa"):
                 record = self._check_sa(st, f, body, ticket_id, notional, path)
             else:
@@ -864,7 +888,7 @@ class Policy:
         if want is None:
             raise PolicyRefusal(f"proposal: {f['_ticket']} PASS block is missing '{key}:'")
         if key in ("size", "price", "leverage", "amount", "stop_price"):
-            if abs(_num(got, f"request {key}") - _num(want, f"ticket {key}")) > 1e-12:
+            if _dec(got, f"request {key}") != _dec(want, f"ticket {key}"):
                 raise PolicyRefusal(f"proposal: {f['_ticket']} {key} '{want}' != request '{got}'")
         elif str(got).strip().lower() != str(want).strip().lower():
             raise PolicyRefusal(f"proposal: {f['_ticket']} {key} '{want}' != request '{got}'")
@@ -933,13 +957,22 @@ class Policy:
         leg = body.get("sl_order")
         if not isinstance(leg, dict):
             raise PolicyRefusal(f"protection: {ticket_id} carries no sl_order")
+        # A stop that is not reduce-only can OPEN a position when it triggers -
+        # `strike-positions` warns about exactly that for orphaned stops, and a
+        # bracket leg is no different. Without this the protection story is a
+        # stop-shaped order, not protection.
+        if not (_truthy(leg.get("reduce_only")) or _truthy(leg.get("close_position"))):
+            raise PolicyRefusal(
+                f"protection: {ticket_id} sl_order must be reduce_only (or close_position); "
+                "a stop that can open a position is not a stop")
         if str(leg.get("working_type", "")).strip().lower() != "mark_price":
             raise PolicyRefusal(
                 f"protection: {ticket_id} sl_order must trigger on mark_price; that is what "
                 "liquidation settles against")
-        if abs(_num(leg.get("size"), f"protection: {ticket_id} sl_order.size")
-               - _num(f["size"], "ticket size")) > 1e-12:
-            raise PolicyRefusal(f"protection: {ticket_id} sl_order.size does not cover the entry")
+        if _dec(leg.get("size"), f"protection: {ticket_id} sl_order.size") != _dec(f["size"], "ticket size"):
+            raise PolicyRefusal(
+                f"protection: {ticket_id} sl_order.size {leg.get('size')} does not cover the "
+                f"entry size {f['size']}")
 
         stop = _num(leg.get("stop_price"), f"protection: {ticket_id} sl_order.stop_price")
         if f.get("stop_price") is not None:
@@ -1013,10 +1046,11 @@ class Policy:
         granted = _date(sa.get("granted"), f"SA: {sa_id} granted")
         if now.date() > expires:
             raise PolicyRefusal(f"SA: {sa_id} expired {expires}")
-        if (expires - granted).days > CEILING_SA_MAX_LIFETIME_DAYS:
+        life_cap = _ceiling("SA_MAX_LIFETIME_DAYS", CEILING_SA_MAX_LIFETIME_DAYS)
+        if (expires - granted).days > life_cap:
             raise PolicyRefusal(
                 f"SA: {sa_id} lifetime {(expires - granted).days} days exceeds the "
-                f"{CEILING_SA_MAX_LIFETIME_DAYS}-day ceiling")
+                f"{life_cap:g}-day ceiling")
 
         # Suspensions are ingested one-way and lifted only by a re-signed register.
         self._ingest_suspensions(st, version)
@@ -1084,14 +1118,13 @@ class Policy:
                 f"SA: the PASS block sized against equity {stated_equity:,.2f}, which is "
                 f"{drift:.1%} from the live {live_equity:,.2f}; re-size before sending")
         cap = min(_num(sa.get("risk_per_trade"), f"SA: {sa_id} risk_per_trade"),
-                  CEILING_MAX_SA_RISK_PER_TRADE)
+                  _ceiling("MAX_SA_RISK_PER_TRADE", CEILING_MAX_SA_RISK_PER_TRADE))
         if risk_usd / live_equity > cap + 1e-9:
             raise PolicyRefusal(f"SA: risk {risk_usd / live_equity:.3%} > {sa_id} cap {cap:.3%}")
 
-        occupied = self._occupied_markets(
-            st, sa_id, sa.get("markets") or [],
-            _num(sa.get("bar_seconds"), f"SA: {sa_id} bar_seconds"))
-        max_open = min(int(_num(sa.get("max_open"), f"SA: {sa_id} max_open")), CEILING_MAX_OPEN_PER_SA)
+        occupied = self._occupied_markets(st, sa_id, sa.get("markets") or [])
+        max_open = min(int(_num(sa.get("max_open"), f"SA: {sa_id} max_open")),
+                       int(_ceiling("MAX_OPEN_PER_SA", CEILING_MAX_OPEN_PER_SA)))
         if max_open < 1:
             raise PolicyRefusal(f"SA: {sa_id} max_open is {max_open}")
         if len(occupied) >= max_open and body.get("symbol") not in occupied:
@@ -1115,14 +1148,21 @@ class Policy:
                 "that stays fresh for longer than a day is not a signal")
         if age < 0:
             raise PolicyRefusal(f"SA: fired_at is {abs(age):.0f}s in the future")
-        if age > bar:
-            raise PolicyRefusal(f"SA: the signal is {age:.0f}s old, past one bar ({bar:.0f}s); stale")
+        # Two bounds, and the tighter one wins. One bar is the rule's own horizon;
+        # the absolute cap is there because a daily bar would otherwise let this
+        # morning's fire be sent tonight, which is not the trade the backtest
+        # measured. A rule entering at the next open is inside the hour.
+        age_cap = _ceiling("MAX_SIGNAL_AGE_SECONDS", CEILING_MAX_SIGNAL_AGE_SECONDS)
+        stale_at = min(bar, age_cap)
+        if age > stale_at:
+            which = "one bar" if bar <= age_cap else "the signal-age ceiling"
+            raise PolicyRefusal(
+                f"SA: the signal is {age:.0f}s old, past {which} ({stale_at:.0f}s); stale")
 
         # Consecutive losses, recomputed from the exchange rather than believed.
-        limit = min(int(_num((sa.get("kill") or {}).get("consecutive_losses",
-                                                        CEILING_MAX_CONSECUTIVE_LOSSES),
-                             f"SA: {sa_id} kill.consecutive_losses")),
-                    CEILING_MAX_CONSECUTIVE_LOSSES)
+        loss_cap = int(_ceiling("MAX_CONSECUTIVE_LOSSES", CEILING_MAX_CONSECUTIVE_LOSSES))
+        limit = min(int(_num((sa.get("kill") or {}).get("consecutive_losses", loss_cap),
+                             f"SA: {sa_id} kill.consecutive_losses")), loss_cap)
         if self.fills_reader and limit > 0:
             try:
                 pnls = list(self.fills_reader(body["symbol"], limit))
@@ -1181,7 +1221,7 @@ class Policy:
                             "at": _now().isoformat(), "register_version": version}
         st.save("suspended.json", suspended)
 
-    def _occupied_markets(self, st: State, sa_id: str, markets: list, grace_seconds: float) -> set:
+    def _occupied_markets(self, st: State, sa_id: str, markets: list) -> set:
         """Which of this SA's markets are already spoken for.
 
         Three sources, unioned, because each covers the others' blind spot:
@@ -1211,6 +1251,10 @@ class Policy:
                 if TICKET_RE.search(str(row.get("client_order_id", ""))):
                     resting.add(str(row.get("symbol")))
 
+        # Without a venue reader there is no evidence to reconcile against, so a
+        # reservation is kept indefinitely and over-counting refuses conservatively.
+        grace = (_floor("RESERVATION_GRACE_SECONDS", RESERVATION_GRACE_SECONDS)
+                 if (self.positions_reader or self.open_orders_reader) else float("inf"))
         keep = {}
         for coid, slot in slots.items():
             symbol = slot.get("symbol")
@@ -1224,9 +1268,11 @@ class Policy:
                 keep[coid] = slot
                 occupied.add(symbol)
                 continue
-            if age < grace_seconds:
-                # A reservation whose order has not surfaced yet. Keeping it is what
-                # stops a second ticket slipping in during the round trip.
+            if age < grace:
+                # A reservation whose order has not surfaced at the venue yet.
+                # Keeping it is what stops a second ticket slipping in during the
+                # round trip; a few minutes is long enough for an order to appear,
+                # and holding a market for a whole bar on no evidence is not.
                 keep[coid] = slot
                 occupied.add(symbol)
         if keep != slots:
@@ -1250,7 +1296,13 @@ class Policy:
         if token_id in consumed.get("tokens", {}):
             raise PolicyRefusal(f"replay: the token for {ticket_id} has already been consumed")
         for key in ("symbol", "side", "size", "price", "leverage", "amount", "margin_type"):
-            if key in token and str(token[key]).strip().lower() != str(body.get(key)).strip().lower():
+            if key not in token:
+                continue
+            if key in ("size", "price", "leverage", "amount"):
+                same = _dec(token[key], f"token {key}") == _dec(body.get(key), f"request {key}")
+            else:
+                same = str(token[key]).strip().lower() == str(body.get(key)).strip().lower()
+            if not same:
                 raise PolicyRefusal(f"token: {key} '{token[key]}' != request '{body.get(key)}'")
         return {"allow": True, "tier": "tier2", "token": token_id, "ticket": ticket_id,
                 "why": "signed per-trade token"}
@@ -1264,10 +1316,21 @@ def _cmd_verify(policy: Policy) -> int:
     print(f"state trusted: {'yes' if policy.state_trusted else 'no (Tier 1 off)'}")
     print("ceilings: " + ", ".join(f"{k}={v:g}" for k, v in effective_ceilings().items()))
     if policy.mode() == "attended":
-        print("no desk/user-signing.pub, so Tier 1 and Tier 2 are off. The policy layer still "
-              "enforces ceilings, forbidden surfaces, leverage and margin rules, protection and "
-              "ticket equality; approval remains the platform gate plus the user's eyes.")
+        print("no desk/user-signing.pub, so Tier 1 and Tier 2 are off. The layer still enforces "
+              "ceilings, forbidden surfaces, leverage and margin rules, protection and ticket "
+              "equality.")
+        print("WARNING: in attended mode nothing in this code verifies an approval. A Risk PASS "
+              "block is markdown any Bot can write. The only approval control is the platform's "
+              "Require Approval rule, and a Bot that runs strike_request.py directly with the key "
+              "in its environment never passes through chat. Installing v3 does not make an "
+              "unsigned open impossible; installing a public key and using tokens does.")
         return 0
+    if policy.state_trusted:
+        print("WARNING: STRIKEGROK_STATE_TRUSTED=1 is set. That asserts this signer runs as its "
+              "own OS user, separate from the Bots. On a shared workspace where the Bots and this "
+              "script are the same user, the assertion is false and Tier 1's slot, replay and "
+              "daily-loss bookkeeping can be edited by the thing it is meant to bound. If you set "
+              "this only to make standing approvals work, unset it and stay at Tier 2.")
     try:
         register = verify_signed_file(policy.register, policy.pub)
         with State(policy.state_dir) as st:

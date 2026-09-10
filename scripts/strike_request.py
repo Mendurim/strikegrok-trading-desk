@@ -55,6 +55,12 @@ import uuid
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from desk_policy import Policy, PolicyRefusal  # noqa: E402
 
+# The release this signer belongs to. Kept in step with plugin.json by a test,
+# because a User-Agent naming a version the desk stopped being is a support
+# question nobody can answer from the logs.
+VERSION = "3.0.1"
+USER_AGENT = f"strikegrok-desk/{VERSION}"
+
 MAINNET = "https://api.strikefinance.org"
 TESTNET = "https://api-v2-testnet.strikefinance.org"
 HEX = "0123456789abcdefABCDEF"
@@ -319,7 +325,7 @@ def _send(base_url: str, method: str, path: str, body: str, query: list[str], ti
     # Cloudflare in front of the API bans urllib's default User-Agent outright
     # (error 1010), so every request must name itself. Without this the desk
     # gets a 403 that looks nothing like an auth problem.
-    headers["User-Agent"] = "strikegrok-desk/1.0"
+    headers["User-Agent"] = USER_AGENT
     if body:
         headers["Content-Type"] = "application/json"
     url = f"{base_url.rstrip('/')}{path}"

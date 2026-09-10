@@ -2,6 +2,24 @@
 
 All notable changes to StrikeGrok are recorded here. Versions follow the release tags the bootstrap skill pins.
 
+## v3.0.1
+
+Six defects found by review of the v3.0.0 policy layer, each reproduced against the code before it was changed.
+
+- **Four ceilings were reported but not enforced.** `effective_ceilings()` applied the environment override for the standing-approval lifetime, per-SA risk, per-SA open count and consecutive-loss kill, while the check sites read the raw constants. `STRIKEGROK_SA_MAX_LIFETIME_DAYS=14` printed 14 and still allowed a 31-day approval. Every ceiling now goes through the same function, and there is a test per ceiling asserting the printed value is the one that refuses. A reported bound nothing enforces is worse than an unreported one.
+- **A bracket's stop leg was not required to be reduce-only.** `strike-positions` already warns that a resting stop can *open* a position when it triggers; a bracket leg is no different. A stop without `reduce_only` (or `close_position`) is now refused.
+- **A daily bar allowed a fire from this morning to be sent tonight.** Signal age is now bounded by one bar *and* by an absolute ceiling of one hour, whichever is tighter. A rule that enters at the next open is inside it; a daily-bar rule keeps working.
+- **A reservation the venue never confirmed held its market for a whole bar.** Held for five minutes now, which is long enough for an order to appear at the venue, after which live positions and resting orders decide. With no venue reader the reservation is held indefinitely and the book ceiling refuses first.
+- **Sizes and prices were compared as floats with a 1e-12 tolerance.** Ticks and steps are decimal, so they are compared as exact decimals: `0.430` still equals `0.43`, and a size differing in the fifteenth place is now a different order rather than the same one.
+- **The signed `User-Agent` still read `strikegrok-desk/1.0`.** It tracks the release, pinned to `plugin.json` by a test.
+
+Two things the review was right about that are not code defects, and are now said plainly by the tooling rather than only in a document:
+
+- **Attended mode is not a weaker Tier 1; it is no approval control in this code at all.** With no public key installed, a `RISK | ... | PASS` block is markdown any Bot can write, and that is all the layer requires before signing an opening order. The control is the platform's Require Approval rule, which lives in chat - and a Bot running `scripts/strike_request.py` directly with the wallet in its environment never passes through chat. Every attended-mode allow is now logged `WARN`, says so in its own record, and `verify` states it. Installing this release does not make an unsigned open impossible; installing a public key and approving with signed tokens does.
+- **`STRIKEGROK_STATE_TRUSTED=1` asserts something that is false on a shared workspace.** On Grok Bot the Bots and the signer are the same OS user. `verify` now warns when the flag is set, and says to unset it and stay at Tier 2 rather than set it to make standing approvals work.
+
+Also: each skill's `metadata.version` is its own and not the release tag, which `skills/README.md` now states, and the bootstrap skill - which embeds the clone pin - carries the release version so the two cannot be read as disagreeing.
+
 ## v3.0.0
 
 The desk can now run unattended, and the control that lets it is enforced in code rather than in a prompt.

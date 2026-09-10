@@ -58,7 +58,7 @@ Everything that can open or add exposure is Tier 1 or Tier 2. There is no fourth
 6. Rounding correct, notional clears the minimum, size does not exceed the ticket, leverage already set.
 7. Fresh `client_order_id` written to the proposal file **before** the send, never used before.
 8. Preview posted and matching the PASS block's `fields` line for line — the policy layer compares `symbol`, `side`, `size`, `price` exactly, so `2431` not `2,431`, `sell` not `short`.
-9. One request about to go. Entry plus stop and take-profit is one strategy order, not three sends - the policy layer refuses a naked entry, so a bracket is not a preference.
+9. One request about to go. Entry plus stop and take-profit is one strategy order, not three sends - the policy layer refuses a naked entry, and refuses a stop leg that is not `reduce_only`, so a bracket is not a preference and neither is the flag.
 
 Any failure: no send, name the item, hand back to the Desk Lead. A policy-layer refusal is item 1 failing, whatever the transcript says.
 

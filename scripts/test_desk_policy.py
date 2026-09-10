@@ -111,7 +111,7 @@ class Desk:
         b = {"symbol": "ETH-USD", "side": "sell", "size": "0.43", "price": "2431",
              "client_order_id": "SG-20260912-03-entry",
              "sl_order": {"type": "stop", "size": "0.43", "stop_price": "2489",
-                          "working_type": "mark_price"}}
+                          "working_type": "mark_price", "reduce_only": True}}
         b.update(overrides)
         return {k: v for k, v in b.items() if v is not None}
 
@@ -238,7 +238,7 @@ class TestPassBlockAnchoring(PolicyCase):
         self.assertIn("is REJECT", self.refuse(
             Desk.body(size="0.20", price="2450", client_order_id="SG-20260912-03-B-entry",
                       sl_order={"type": "stop", "size": "0.20", "stop_price": "2489",
-                                "working_type": "mark_price"})))
+                                "working_type": "mark_price", "reduce_only": True})))
 
     def test_a_later_block_does_not_overwrite_the_approved_one(self):
         self.desk.proposal(blocks=[
@@ -296,7 +296,7 @@ class TestOpenSlots(PolicyCase):
         return Desk.body(symbol="BTC-USD", price="77120", size="0.013",
                          client_order_id="SG-20260912-05-entry",
                          sl_order={"type": "stop", "size": "0.013", "stop_price": "78000",
-                                   "working_type": "mark_price"})
+                                   "working_type": "mark_price", "reduce_only": True})
 
     def test_the_first_trade_under_max_open_one_is_allowed(self):
         self.assertEqual(self.allow()["tier"], "tier1")
@@ -587,31 +587,43 @@ class TestProtectionIsMandatory(PolicyCase):
 
     def test_a_stop_that_differs_from_the_ticket_is_refused(self):
         body = Desk.body(sl_order={"type": "stop", "size": "0.43", "stop_price": "2495",
-                                   "working_type": "mark_price"})
+                                   "working_type": "mark_price", "reduce_only": True})
         self.assertIn("stop_price '2489' != request '2495'", self.refuse(body))
 
     def test_a_stop_on_the_wrong_side_is_refused(self):
         self.desk.proposal(blocks=[
             (f"RISK | SG-20260912-03 | PASS | SA-03 | {utc()}", Desk.fields(stop_price="2400"))])
         body = Desk.body(sl_order={"type": "stop", "size": "0.43", "stop_price": "2400",
-                                   "working_type": "mark_price"})
+                                   "working_type": "mark_price", "reduce_only": True})
         self.assertIn("would trigger immediately", self.refuse(body))
 
     def test_a_stop_that_does_not_cover_the_entry_is_refused(self):
         body = Desk.body(sl_order={"type": "stop", "size": "0.20", "stop_price": "2489",
-                                   "working_type": "mark_price"})
+                                   "working_type": "mark_price", "reduce_only": True})
         self.assertIn("does not cover the entry", self.refuse(body))
 
     def test_a_stop_on_the_contract_price_is_refused(self):
         body = Desk.body(sl_order={"type": "stop", "size": "0.43", "stop_price": "2489",
-                                   "working_type": "contract_price"})
+                                   "working_type": "contract_price", "reduce_only": True})
         self.assertIn("mark_price", self.refuse(body))
+
+    def test_a_stop_that_is_not_reduce_only_is_refused(self):
+        """A stop that can open a position is not a stop. `strike-positions` warns
+        about exactly this for orphaned stops; a bracket leg is no different."""
+        body = Desk.body(sl_order={"type": "stop", "size": "0.43", "stop_price": "2489",
+                                   "working_type": "mark_price"})
+        self.assertIn("must be reduce_only", self.refuse(body))
+
+    def test_a_stop_flagged_close_position_is_accepted(self):
+        body = Desk.body(sl_order={"type": "stop", "size": "0.43", "stop_price": "2489",
+                                   "working_type": "mark_price", "close_position": True})
+        self.assertEqual(self.allow(body)["tier"], "tier1")
 
     def test_a_stop_wider_than_the_stated_risk_is_refused(self):
         self.desk.proposal(blocks=[
             (f"RISK | SG-20260912-03 | PASS | SA-03 | {utc()}", Desk.fields(stop_price="2600"))])
         body = Desk.body(sl_order={"type": "stop", "size": "0.43", "stop_price": "2600",
-                                   "working_type": "mark_price"})
+                                   "working_type": "mark_price", "reduce_only": True})
         self.assertIn("the stop and the sizing disagree", self.refuse(body))
 
 
@@ -643,7 +655,7 @@ class TestOrderKinds(PolicyCase):
         self.market_ticket(size="900")
         body = Desk.body(size="900", price=None, slippage="0.003",
                          sl_order={"type": "stop", "size": "900", "stop_price": "2489",
-                                   "working_type": "mark_price"})
+                                   "working_type": "mark_price", "reduce_only": True})
         self.assertIn("ceiling: notional", self.refuse(body))
 
     def test_a_market_ticket_without_a_reference_price_refuses(self):
@@ -675,6 +687,85 @@ class TestOrderKinds(PolicyCase):
     def test_a_leverage_in_the_body_must_match_the_ticket(self):
         self.desk.proposal()
         self.assertIn("leverage '3' != request '50'", self.refuse(Desk.body(leverage="50")))
+
+
+class TestExactDecimalMatching(PolicyCase):
+    """Sizes and prices are decimal on the wire because ticks and steps are.
+
+    A float comparison with a 1e-12 tolerance calls two different orders the same
+    order, which is precisely the thing ticket equality exists to prevent.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.desk.proposal()
+
+    def test_a_difference_under_the_old_float_tolerance_is_still_a_difference(self):
+        drifted = "0.430000000000001"          # 1e-15 away; the old tolerance accepted it
+        self.assertLess(abs(float(drifted) - 0.43), 1e-12)
+        self.assertIn("size", self.refuse(Desk.body(size=drifted)))
+
+    def test_trailing_zeros_are_the_same_number(self):
+        self.assertEqual(self.allow(Desk.body(size="0.430"))["tier"], "tier1")
+
+    def test_a_non_numeric_size_refuses_rather_than_raising(self):
+        self.assertIn("not a decimal number", self.refuse(Desk.body(size="lots")))
+
+    def test_the_stop_leg_size_is_compared_exactly_too(self):
+        body = Desk.body(sl_order={"type": "stop", "size": "0.430000000000001",
+                                   "stop_price": "2489", "working_type": "mark_price",
+                                   "reduce_only": True})
+        self.assertIn("does not cover the entry", self.refuse(body))
+
+
+class TestReservationGrace(PolicyCase):
+    """A reservation the venue never confirms should not hold a market all day."""
+
+    def setUp(self):
+        super().setUp()
+        self.desk.write_register(markets=["ETH-USD", "BTC-USD"], max_open=1)
+        self.desk.proposal()
+        self.desk.proposal(ticket="SG-20260912-05", blocks=[
+            (f"RISK | SG-20260912-05 | PASS | SA-03 | {utc()}",
+             Desk.fields(symbol="BTC-USD", price="77120", stop_price="78000",
+                         size="0.013", risk_usd="11.44"))])
+        self.other = Desk.body(symbol="BTC-USD", price="77120", size="0.013",
+                               client_order_id="SG-20260912-05-entry",
+                               sl_order={"type": "stop", "size": "0.013", "stop_price": "78000",
+                                         "working_type": "mark_price", "reduce_only": True})
+
+    def test_a_fresh_reservation_holds_its_market(self):
+        self.send()
+        self.rewind_pace()
+        self.assertIn("1/1 open tickets", self.refuse(self.other, positions=[], resting=[]))
+
+    def test_an_unconfirmed_reservation_frees_after_the_grace_period(self):
+        """Five minutes is long enough for an order to appear at the venue. Holding
+        the market for a whole bar on no evidence is not proportionate."""
+        self.send()
+        self.age_slot("SA-03", "SG-20260912-03-entry", seconds=600)
+        self.rewind_pace()
+        self.assertEqual(self.allow(self.other, positions=[], resting=[])["tier"], "tier1")
+
+    def test_without_a_positions_reader_nothing_opens_at_all(self):
+        """The grace period only shortens a reservation because the venue can be
+        asked instead. With no reader there is nothing to ask, and the book
+        ceiling refuses before the slot count is even reached."""
+        self.send()
+        self.age_slot("SA-03", "SG-20260912-03-entry", seconds=99999)
+        self.rewind_pace()
+        policy = desk_policy.Policy(account_reader=lambda: 10412.60, desk=self.desk.root)
+        with self.assertRaises(desk_policy.PolicyRefusal) as caught:
+            policy.check("POST", "/v2/order/strategy", self.other)
+        self.assertIn("the book cannot be counted", str(caught.exception))
+
+    def test_an_aged_reservation_is_kept_when_only_resting_orders_can_be_read(self):
+        """One reader is enough evidence to reconcile against, so the short grace
+        applies - but the reservation is still held while the order may exist."""
+        self.send()
+        self.rewind_pace()
+        self.assertIn("1/1 open tickets",
+                      self.refuse(self.other, positions=[], resting=[]))
 
 
 class TestTicketExpiry(PolicyCase):
@@ -712,7 +803,7 @@ class TestRunawayGuards(PolicyCase):
         body = Desk.body(symbol="BTC-USD", price="77120", size="0.013",
                          client_order_id="SG-20260912-05-entry",
                          sl_order={"type": "stop", "size": "0.013", "stop_price": "78000",
-                                   "working_type": "mark_price"})
+                                   "working_type": "mark_price", "reduce_only": True})
         self.assertIn("pace:", self.refuse(body))
 
     def test_the_open_position_ceiling_is_not_raised_by_any_sa(self):
@@ -938,6 +1029,18 @@ class TestAttendedMode(unittest.TestCase):
             self.desk.policy().check("POST", "/v2/order/strategy", body)
         self.assertIn("ceiling: notional", str(caught.exception))
 
+    def test_an_unsigned_open_is_logged_as_a_warning(self):
+        """Attended mode allows the open. It must not do so quietly - nothing in
+        the code verified an approval, and the log is where that has to show."""
+        self.desk.policy().check("POST", "/v2/order/strategy", Desk.body())
+        log = (self.desk.root / "desk/policy-state/policy.log").read_text()
+        self.assertIn("WARN", log)
+        self.assertIn("unsigned open", log)
+
+    def test_the_allow_record_says_nothing_verified_an_approval(self):
+        decision = self.desk.policy().check("POST", "/v2/order/strategy", Desk.body())
+        self.assertIn("NOTHING HERE VERIFIED AN APPROVAL", decision["why"])
+
     def test_a_standing_approval_claim_refuses_without_a_key(self):
         self.desk.proposal()
         with self.assertRaises(desk_policy.PolicyRefusal) as caught:
@@ -1142,6 +1245,48 @@ class TestNotionalAndBarCeilings(PolicyCase):
         self.desk.write_register(bar_seconds=200000)
         self.assertIn("bar_seconds", self.refuse())
 
+    def test_every_reported_ceiling_is_the_one_actually_enforced(self):
+        """effective_ceilings() printing a tightened value that no check site reads
+        is worse than not printing it: it reports a bound the desk does not have."""
+        cases = [
+            ("SA_MAX_LIFETIME_DAYS", "14", dict(granted=(dt.date.today() - dt.timedelta(days=20)).isoformat(),
+                                                expires=(dt.date.today() + dt.timedelta(days=10)).isoformat()),
+             "lifetime"),
+            ("MAX_SA_RISK_PER_TRADE", "0.0001", {}, "cap"),
+            ("MAX_OPEN_PER_SA", "0", {}, "max_open"),
+        ]
+        for name, value, register, expected in cases:
+            with self.subTest(ceiling=name):
+                self.desk.write_register(**register)
+                os.environ[f"STRIKEGROK_{name}"] = value
+                try:
+                    self.assertEqual(desk_policy.effective_ceilings()[name], float(value))
+                    self.assertIn(expected, self.refuse())
+                finally:
+                    os.environ.pop(f"STRIKEGROK_{name}", None)
+
+    def test_a_tightened_consecutive_loss_ceiling_is_enforced(self):
+        os.environ["STRIKEGROK_MAX_CONSECUTIVE_LOSSES"] = "2"
+        self.addCleanup(lambda: os.environ.pop("STRIKEGROK_MAX_CONSECUTIVE_LOSSES", None))
+        self.assertIn("2 consecutive losses", self.refuse(fills=[-1.0, -2.0, 5.0]))
+
+    def test_a_fire_older_than_the_signal_age_ceiling_is_stale(self):
+        """A daily bar would otherwise let this morning's fire be sent tonight."""
+        self.desk.write_register(bar_seconds=86400)
+        self.desk.proposal(blocks=[
+            (f"RISK | SG-20260912-03 | PASS | SA-03 | {utc()}", Desk.fields(fired_at=utc(-7200)))])
+        self.assertIn("signal-age ceiling", self.refuse())
+
+    def test_inside_the_signal_age_ceiling_a_daily_bar_still_works(self):
+        self.desk.write_register(bar_seconds=86400)
+        self.assertEqual(self.allow()["tier"], "tier1")
+
+    def test_one_bar_still_wins_when_it_is_the_tighter_bound(self):
+        self.desk.write_register(bar_seconds=600)
+        self.desk.proposal(blocks=[
+            (f"RISK | SG-20260912-03 | PASS | SA-03 | {utc()}", Desk.fields(fired_at=utc(-900)))])
+        self.assertIn("past one bar", self.refuse())
+
     def test_the_effective_ceilings_are_reportable(self):
         ceilings = desk_policy.effective_ceilings()
         self.assertEqual(ceilings["MAX_LEVERAGE"], 5)
@@ -1243,7 +1388,8 @@ class TestTheAgentPromptsMatchTheCode(PolicyCase):
                 "price": fields["price"], "leverage": fields["leverage"],
                 "client_order_id": "SG-20260912-03-entry",
                 "sl_order": {"type": "stop", "size": fields["size"],
-                             "stop_price": fields["stop_price"], "working_type": "mark_price"}}
+                             "stop_price": fields["stop_price"], "working_type": "mark_price",
+                             "reduce_only": True}}
         self.desk.write_register(markets=[fields["symbol"]],
                                  rules_sha256=hashlib.sha256(RULES.encode()).hexdigest())
         decision = self.desk.policy(equity=float(fields["equity"])).check(
