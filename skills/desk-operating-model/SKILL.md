@@ -4,7 +4,7 @@ description: How the StrikeGrok trading desk works as a team of Grok Bots - role
 license: MIT
 metadata:
   version: "1.1.2"
-  author: Galleon Labs
+  author: Mendurim
   category: desk
 ---
 

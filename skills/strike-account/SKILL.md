@@ -4,7 +4,7 @@ description: Reading Strike Finance account state through the signed REST API - 
 license: MIT
 metadata:
   version: "2.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  author: Mendurim
   category: strike
   network-default: mainnet
 ---

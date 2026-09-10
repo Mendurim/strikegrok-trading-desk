@@ -4,7 +4,7 @@ description: The end-to-end procedure for one trade on the StrikeGrok desk - fro
 license: MIT
 metadata:
   version: "1.1.1"
-  author: Galleon Labs
+  author: Mendurim
   category: desk
 ---
 

@@ -4,7 +4,7 @@ description: The Trade Reviewer's procedure for journaling desk activity and rev
 license: MIT
 metadata:
   version: "1.0.2"
-  author: Galleon Labs
+  author: Mendurim
   category: desk
 ---
 

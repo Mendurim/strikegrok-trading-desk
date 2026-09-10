@@ -4,7 +4,7 @@ description: The desk's Strike Finance API wallet - generating an Ed25519 keypai
 license: MIT
 metadata:
   version: "1.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  author: Mendurim
   category: strike
   network-default: mainnet
 ---

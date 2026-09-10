@@ -4,7 +4,7 @@ description: How the Risk Manager writes the desk's risk limits with the user, s
 license: MIT
 metadata:
   version: "1.1.1"
-  author: Galleon Labs
+  author: Mendurim
   category: desk
 ---
 

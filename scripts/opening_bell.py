@@ -24,8 +24,7 @@ TESTNET_BASE_URL = "https://api-v2-testnet.strikefinance.org/price"
 BANDS_BPS = (5, 10, 25)
 # `/v2/depth` defaults to 20 levels a side, which stops well short of 25 bps on
 # a liquid Strike perp, so the snapshot always asks for the documented maximum.
-# At 1000 the whole resting book comes back - no coarser re-paging is needed the
-# way Hyperliquid's twenty-level `l2Book` needs `nSigFigs`. Two different things
+# At 1000 the whole resting book comes back in one response. Two different things
 # can still leave a band unmeasured, and the snapshot keeps them apart: the book
 # genuinely has no orders out that far (a fact about the market), or the response
 # hit the level cap (a limit of the read). Either way the band is a floor, never

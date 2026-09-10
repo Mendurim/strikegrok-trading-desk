@@ -1,32 +1,20 @@
 # Reuse and attribution
 
-StrikeGrok Trading Desk is a port of **[HyperGrok Trading Desk](https://github.com/galleonlabs/hypergrok-trading-desk)**, created by **Andrew Wilkinson and Galleon Labs** and released under the [MIT license](LICENSE).
-
-The seven-role desk design, the trade lifecycle, the ticket and proposal formats, the evidence standard, the `unavailable` verdict and the eight `desk-*` process skills are theirs. This repository replaces the Hyperliquid integration with Strike Finance market data and signed Strike API execution, and keeps everything else.
-
-Both projects are MIT licensed. The original copyright and permission notice is retained in [`LICENSE`](LICENSE) and beside every skill.
+StrikeGrok Trading Desk is released under the [MIT license](LICENSE).
 
 ## What MIT requires
 
-When you copy or distribute this software or substantial portions of it, include the existing copyright notice and the MIT permission notice. Keep the complete `LICENSE` file with a redistributed repository or package. For extracted code or skill files, carry the applicable license notice into the destination's license or third-party notices rather than dropping it.
+When you copy or distribute this software or substantial portions of it, include the copyright notice and the MIT permission notice from [`LICENSE`](LICENSE). Keep the complete `LICENSE` file with a redistributed repository or package. For extracted code or skill files, carry the licence notice into the destination's licence or third-party notices rather than dropping it.
 
-Preserve any other authors' copyright and license notices too. Dependencies and third-party material retain their own licenses; the MIT license does not replace them. The [license text](LICENSE) governs reuse.
+Dependencies and third-party material retain their own licences; this one does not replace them.
 
-## Give visible credit
+## Credit
 
-A source link in your README, documentation or acknowledgements helps people find the original project. This is appreciated, although a public-facing credit line is not an extra MIT condition.
-
-You can adapt this Markdown to describe what you actually reused:
+A source link in your README, documentation or acknowledgements helps people find the project. It is appreciated, though not an extra MIT condition.
 
 ```markdown
-Based on [StrikeGrok Trading Desk](https://github.com/Mendurim/strikegrok-trading-desk),
-a port of [HyperGrok Trading Desk](https://github.com/galleonlabs/hypergrok-trading-desk)
-by [Andrew Wilkinson](https://andrewwilkinson.io) and
-[Galleon Labs](https://github.com/galleonlabs). Used under the MIT license.
+Based on [StrikeGrok Trading Desk](https://github.com/Mendurim/strikegrok-trading-desk).
+Used under the MIT license.
 ```
 
-If you reused only part of it, say which part - a skill, the agent prompts, the Opening Bell - rather than implying you shipped the whole desk.
-
-## Credit for the Strike port
-
-The Strike Finance integration in this repository - the ten `strike-*` skills, the signed-request helper, the ported Opening Bell and desk doctor - is offered under the same MIT terms. No separate credit is required beyond the notice above.
+If you reused only part of it - a skill, the agent prompts, the Opening Bell - say which, rather than implying you shipped the whole desk.

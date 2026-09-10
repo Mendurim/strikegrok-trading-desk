@@ -1,10 +1,10 @@
 ---
 name: strike-market-data
-description: Reading Strike Finance market data from the public REST Price Service - mark and index price, order book depth, spread, funding, open interest, 24h statistics, candles and per-market trading constraints - plus the MCP's indicator snapshot and market scan. No key, no token, no account. Use for market briefs, liquidity reads before execution, and candle history for backtests. Read-only.
+description: Reading Strike Finance market data from the public REST Price Service - mark and index price, order book depth, spread, funding, open interest, 24h statistics, candles and per-market trading constraints. No key, no account. Use for market briefs, liquidity reads before execution, and candle history for backtests. Read-only.
 license: MIT
 metadata:
-  version: "1.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  version: "1.0.1"
+  author: Mendurim
   category: strike
   network-default: mainnet
 ---
@@ -13,7 +13,7 @@ metadata:
 
 The desk reads markets from Strike's **public REST Price Service**. It needs no token and touches no account, which is why the desk can brief a market before it can trade one.
 
-Execution goes elsewhere entirely (`strike-mcp`). The two use different symbols: `XAU-USD` here is `GOLD-PERP` there. Every figure the desk quotes carries its service, its symbol as spelled for that service, and a UTC time.
+Execution uses the signed API (`strike-orders`) with the same `-USD` symbols, so nothing needs translating. Every figure the desk quotes carries its source and a UTC time.
 
 ## 1. Base URLs
 
@@ -79,14 +79,13 @@ Funding on Strike accrues **hourly** - `nextFundingTime` lands on the hour. Stat
 
 `ADA-USD` has `stepSize: 1`: whole tokens. `MIN_NOTIONAL` is $10 across the board, which makes a minimum-size rehearsal trade cheap.
 
-## 6. The MCP's two market tools
+## 6. Derived measures
 
-`strike-mcp` also offers market reads, computed rather than raw. Use them alongside REST, never instead of it.
+Anything beyond what the endpoints return is the desk's own arithmetic, shown with its formula: notional from size and mark, annualised funding from the hourly rate, depth bands from the book, realised range from candles.
 
-- `strike_get_market_snapshot` - mark, last close, RSI(14), EMA(20/50/200), MACD, Bollinger(20,2), ADX(14), ATR(14), a trend label, and the market's `tick_size`, `size_precision`, `min_notional_usd`, `max_leverage`. The fastest way to get execution constraints in MCP symbols. Returns `isError` when its upstream feed is stale - then treat the indicators as `unavailable` and fall back to REST, saying you did.
-- `strike_scan_markets` - all supported markets ranked by composite "hotness", with an `excluded` list naming those under the liquidity floors.
+The optional research add-on (`strike-research-tools`) can supply computed indicators and a liquidity screen. Use them alongside these reads, never instead of them, and treat the desk's own arithmetic as the primary figure.
 
-**An indicator is not a signal.** RSI(14) at 78 is a fact about recent closes. "So it will fall" is not this desk's job, and no Bot on the floor says it. Hotness has no direction: a market tops the list as readily for being liquidated as for being accumulated. The `excluded` list is the genuinely useful half - it tells the desk which markets are too thin to trade before anyone reads their chart.
+**An indicator is not a signal.** RSI(14) at 78 is a fact about recent closes. "So it will fall" is not this desk's job, and no Bot on the floor says it.
 
 ## 7. Data hygiene
 

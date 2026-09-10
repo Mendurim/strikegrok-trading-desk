@@ -3,8 +3,8 @@ name: desk-execution-protocol
 description: The Execution Trader's procedure for turning an approved ticket into one Strike action through the signed API and reconciling it - the pre-send checklist, the preview block, single-send discipline, unknown-result recovery by client order id, and the execution report. Use before and after every send, cancel, replacement, leverage change or close.
 license: MIT
 metadata:
-  version: "2.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  version: "2.0.1"
+  author: Mendurim
   category: desk
 ---
 
@@ -67,7 +67,7 @@ python3 scripts/strike_request.py GET /v2/order --query client_order_id=SG-20260
 4. Confirm with a second look before acting on a negative: `GET /v2/openOrders`, `GET /v2/history/order` for the symbol and window, `GET /v2/positions`. A single read against a service that just timed out deserves corroboration.
 5. Only then may a replacement be sent, with a **fresh** `client_order_id` and the user's approval by id. Never reuse the original id: reusing it destroys the one handle that would tell the two sends apart if the first ever surfaced.
 
-A note on what changed. The Hyperliquid desk bounded every send with `expiresAfter` so a lost order became provably dead once the deadline passed. Strike has no order expiry, so elapsed time still proves nothing here. What replaces it is better: a client order id the desk picked, and an endpoint that answers whether that exact order exists. The recovery is a lookup, not an inference.
+Note that elapsed time proves nothing here: Strike has no order expiry, so an order cannot age out into safety. What the desk relies on instead is the client order id it picked and an endpoint that answers whether that exact order exists. The recovery is a lookup, not an inference.
 
 If the lookup itself is unavailable - the API is down, not just slow - the desk is blind rather than informed. Freeze sends on that symbol, say `unknown, lookup unavailable`, and wait for the API rather than guessing.
 

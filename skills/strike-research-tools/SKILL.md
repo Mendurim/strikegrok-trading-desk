@@ -4,7 +4,7 @@ description: The optional crowdtime MCP research add-on - how to reach it, and i
 license: MIT
 metadata:
   version: "2.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  author: Mendurim
   category: strike
   network-default: mainnet
 ---

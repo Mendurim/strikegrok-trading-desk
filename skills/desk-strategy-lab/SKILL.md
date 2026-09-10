@@ -4,7 +4,7 @@ description: How the Strategist works with the user to turn their own trading id
 license: MIT
 metadata:
   version: "1.1.0"
-  author: Galleon Labs
+  author: Mendurim
   category: desk
 ---
 

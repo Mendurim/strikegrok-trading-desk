@@ -4,7 +4,7 @@ description: Strike Finance execution features beyond a single order - TWAP stra
 license: MIT
 metadata:
   version: "1.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  author: Mendurim
   category: strike
   network-default: mainnet
 ---

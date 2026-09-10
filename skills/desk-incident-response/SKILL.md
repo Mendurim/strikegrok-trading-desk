@@ -4,7 +4,7 @@ description: What the desk does when something goes wrong on Strike - unknown se
 license: MIT
 metadata:
   version: "1.1.0"
-  author: Galleon Labs
+  author: Mendurim
   category: desk
 ---
 

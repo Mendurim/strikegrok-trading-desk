@@ -10,7 +10,7 @@ body:
     id: file
     attributes:
       label: File
-      placeholder: skills/hyperliquid-orders/SKILL.md
+      placeholder: skills/strike-orders/SKILL.md
     validations:
       required: true
   - type: dropdown

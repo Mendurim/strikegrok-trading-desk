@@ -3,8 +3,8 @@ name: strike-setup
 description: Prepare the desk computer to work with Strike Finance - the two surfaces (public market data and the signed trading API), confirm public connectivity, provision the API wallet through the secure secret store when the user asks to trade, run the read-only readiness check, and understand why the desk rehearses with previews and minimum-size orders rather than testnet. Use during desk setup, when moving between research and trading levels, when a key is rotated, or when any Strike call fails with an environment problem.
 license: MIT
 metadata:
-  version: "2.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  version: "2.0.1"
+  author: Mendurim
   category: strike
   network-default: mainnet
 ---
@@ -78,7 +78,7 @@ A 401 means the key is unregistered, wrong, or the clock has drifted - `strike-a
 
 ## 6. Rehearsal, honestly
 
-HyperGrok rehearsed every new kind of action on Hyperliquid testnet with play money before touching mainnet. **Strike's testnet cannot do that job.** It lists four markets and its books are empty, so an order there proves the request is well-formed and signed correctly - and nothing else. No fill, no slippage, no trigger behaviour, no protection under load.
+**Strike's testnet cannot rehearse a trade.** It lists four markets and its books are empty, so an order there proves the request is well-formed and signed correctly - and nothing else. No fill, no slippage, no trigger behaviour, no protection under load.
 
 It is still worth exactly that much: `--testnet` on `strike_request.py` is a good way to prove the signing scheme works before the key touches real money. Use it for that, and claim nothing more.
 

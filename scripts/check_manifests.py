@@ -51,8 +51,7 @@ VERSION_TAG_RE = re.compile(r"\bv\d+\.\d+\.\d+\b")
 # `CHANGELOG.md` records every past release and `CONTRIBUTING.md` documents the
 # release procedure against historical tags; both name old versions by design.
 # Documents that legitimately name a release other than this one: change history,
-# and the provenance record, which names the upstream HyperGrok release this
-# desk was ported from.
+# and the provenance record, which cites the releases of its sources.
 RELEASE_HISTORY_DOCS = ("CHANGELOG.md", "CONTRIBUTING.md", "docs/PROVENANCE.md")
 
 NUMBER_WORDS = {

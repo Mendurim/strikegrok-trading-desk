@@ -14,7 +14,7 @@ Market data comes from Strike's **public REST Price Service**; execution goes th
 
 Open Grok Bot and paste this to any Bot:
 
-> Set up the StrikeGrok trading desk from https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.0.0/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.0.0/SETUP.md for the complete runbook, and finish with its evidence receipt.
+> Set up the StrikeGrok trading desk from https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.0.1/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.0.1/SETUP.md for the complete runbook, and finish with its evidence receipt.
 
 The desk starts in research mode. The first demo uses only Strike's public Price Service: no token, no account read, no order. Connect the MCP when you are ready to trade.
 
@@ -88,7 +88,7 @@ Eighteen skills, in the portable `SKILL.md` format, shared by all your Bots.
 
 **Strike has no dry-run mode.** The MCP-based version of this desk had one in the transport; the direct API does not. The desk replaces it with a preview block: every request is built as a file, posted to you verbatim, and that same file is sent. It is a discipline rather than a gate, so the Require Approval rule in Grok Bot matters more, not less.
 
-**Strike has no order expiry.** Hyperliquid's `expiresAfter` let a desk prove a lost order could never arrive; nothing here does that. What the desk has instead is a `client_order_id` it chooses before every send, and an endpoint that answers whether that exact order exists - so a lost response is a lookup, not a guess. A replacement always gets a fresh id.
+**Strike has no order expiry.** An order cannot age out into safety, so elapsed time never proves a lost send is dead. What the desk relies on instead is a `client_order_id` it chooses before every send, and an endpoint that answers whether that exact order exists - so a lost response is a lookup, not a guess. A replacement always gets a fresh id.
 
 Perpetual futures can liquidate an account. StrikeGrok is documentation and instructions, not financial advice.
 
@@ -137,10 +137,8 @@ assets/      the mascot - use it as your Bots' avatar
 | [Provenance](docs/PROVENANCE.md) | sources and licences |
 | [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) | |
 
-## License and credit
+## License
 
-[MIT licensed](LICENSE), with the copyright and permission notice retained when reusing copies or substantial portions.
+[MIT licensed](LICENSE). Keep the copyright and permission notice when reusing copies or substantial portions. See [reuse and attribution](ATTRIBUTION.md) for a ready-to-copy credit line, and [provenance](docs/PROVENANCE.md) for sources.
 
-StrikeGrok is a port of [HyperGrok Trading Desk](https://github.com/galleonlabs/hypergrok-trading-desk) by [Andrew Wilkinson](https://andrewwilkinson.io) and [Galleon Labs](https://github.com/galleonlabs), which built the seven-role desk design, the trade lifecycle and the evidence standard this repository keeps. The Hyperliquid integration has been replaced with Strike Finance market data and signed Strike API execution; the desk's process is theirs.
-
-See [reuse and attribution](ATTRIBUTION.md) for a ready-to-copy credit line.
+Perpetual futures can liquidate an account. StrikeGrok is documentation and instructions, not financial advice.

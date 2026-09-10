@@ -4,7 +4,7 @@ description: Build and verify a StrikeGrok trading desk from the pinned public r
 license: MIT
 metadata:
   version: "1.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  author: Mendurim
   category: desk
 ---
 
@@ -29,7 +29,7 @@ If `/workspace/strikegrok` is already a Git checkout, read its `plugin.json` and
 
 ```bash
 mkdir -p /workspace && cd /workspace
-git clone --depth 1 --branch v1.0.0 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
+git clone --depth 1 --branch v1.0.1 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
 cd /workspace/strikegrok
 git rev-parse HEAD
 bash scripts/check.sh

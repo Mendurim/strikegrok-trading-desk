@@ -4,7 +4,7 @@ description: How the desk watches markets and the account between trades using G
 license: MIT
 metadata:
   version: "1.1.1"
-  author: Galleon Labs
+  author: Mendurim
   category: desk
 ---
 

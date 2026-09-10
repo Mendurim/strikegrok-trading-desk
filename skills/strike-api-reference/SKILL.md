@@ -4,7 +4,7 @@ description: Compact reference for the Strike Finance surfaces the desk uses - e
 license: MIT
 metadata:
   version: "2.0.0"
-  author: Galleon Labs (HyperGrok), ported for Strike Finance
+  author: Mendurim
   category: strike
   network-default: mainnet
 ---
