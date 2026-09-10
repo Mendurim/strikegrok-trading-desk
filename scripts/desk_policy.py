@@ -1407,6 +1407,10 @@ def main(argv=None) -> int:
             positions_reader=lambda: [{"symbol": f"HELD-{i}", "size": "1"} for i in range(args.positions)],
         )
         try:
+            # A dry run has to open the trading day the same way a real one does,
+            # or every explain answers "no start-of-day equity" and tells the user
+            # nothing about the ticket they asked about.
+            policy.check("GET", "/v2/account", {})
             print(json.dumps(policy.check("POST", args.path, body), indent=2))
         except PolicyRefusal as exc:
             print(f"REFUSE {exc}"); return 2
