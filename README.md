@@ -105,13 +105,11 @@ In Claude Code, install it from this repository:
 
 In Grok Build and Cursor, open the repository and enable the plugin.
 
-The same pack installs as a skill:
+The same pack installs as a skill, straight from this repository:
 
 ```
 npm exec --package=skills@1.5.23 -- skills add Mendurim/strikegrok-trading-desk
 ```
-
-Live listing: [skills.sh](https://www.skills.sh/Mendurim/strikegrok-trading-desk)
 
 Either way, run `/desk-operating-model` to begin.
 
