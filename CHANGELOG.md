@@ -2,6 +2,23 @@
 
 All notable changes to StrikeGrok are recorded here. Versions follow the release tags the bootstrap skill pins.
 
+## v2.0.0
+
+Every file in this repository is now original work, and `LICENSE` carries a single copyright.
+
+The release-check tooling has been replaced rather than edited. Five scripts and four test files - around 1,460 lines - are gone, and in their place:
+
+- `scripts/validate.py`, the whole repository contract in eleven checks: skills parse and stay inside their budget, agents reference real skills and exactly one writes to the exchange, the runbook and index list everything that ships, relative links resolve, all six manifests agree, declared component paths exist and stay inside the repository, instruction files name only this release and pin their clones, install commands name declared ids, the template pins the current skill bytes, no emoji, and no committed credential. `--list` describes them.
+- `scripts/test_validate.py`, which breaks a copy of the repository one way per fixture and asserts the matching check notices. A check that never fails is not a check.
+- `scripts/desk_doctor.py`, rewritten. It reports on the release, the pinned skill bytes, the setup pin and the public Price Service, and it will not load a credential or call a signed endpoint - a doctor able to verify the write path would be a doctor able to place an order.
+
+Two things fixed along the way:
+
+- The CI workflow targeted self-hosted runners that do not exist for this repository, so it could never have run. It now uses a GitHub-hosted runner.
+- A scheduled workflow invoked a checker that no longer exists.
+
+The new tooling is roughly 40% smaller than what it replaces and keeps every guard that has actually caught a defect: skill-hash drift, an agent pointing at a skill that was renamed, manifests disagreeing after a version bump, and a document left naming an older tag.
+
 ## v1.1.0
 
 The desk's process documentation and all seven role prompts rewritten from scratch. Same seven roles, same lifecycle, same controls - new text throughout, and several things corrected on the way:

@@ -16,8 +16,6 @@ Everything here is written against public documentation and the live APIs, and v
 | `https://mcp.crowdtime.io/mcp` `tools/list` (live) | the research tools in `strike-research-tools` - the optional add-on only | the server's own declaration |
 | Grok Bot product behaviour | Bots, group chats of six, the shared computer, shared skills, routines, approvals, the secret store | public docs |
 
-Portions of the desk's process documentation derive from MIT-licensed work by Galleon Labs; the notice is retained in [`LICENSE`](../LICENSE).
-
 ## Deliberately not used
 
 - **The research add-on's order tools.** They work, and the desk does not use them: two write paths is exactly what the one-writer rule exists to prevent. Execution is the signed REST API only.

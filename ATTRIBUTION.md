@@ -18,7 +18,3 @@ Used under the MIT license.
 ```
 
 If you reused only part of it - a skill, the agent prompts, the Opening Bell - say which, rather than implying you shipped the whole desk.
-
-## Third-party notice
-
-Portions of the desk's process documentation derive from MIT-licensed work by Galleon Labs, whose copyright notice is retained in [`LICENSE`](LICENSE) as that licence requires.

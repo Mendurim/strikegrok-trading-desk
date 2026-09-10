@@ -41,15 +41,15 @@ bash scripts/check.sh
 ## 3. Create the repository and tag the release
 
 ```bash
-git add -A && git commit -m "StrikeGrok v1.1.0"
+git add -A && git commit -m "StrikeGrok v2.0.0"
 gh repo create "$GH_OWNER/strikegrok-trading-desk" --public --source=. --push
-git tag -a v1.1.0 -m "StrikeGrok v1.1.0" && git push --tags
+git tag -a v2.0.0 -m "StrikeGrok v2.0.0" && git push --tags
 ```
 
-The tag matters. The bootstrap skill clones `--branch v1.1.0`, so the desk your
+The tag matters. The bootstrap skill clones `--branch v2.0.0`, so the desk your
 Bots build is the desk you reviewed, not whatever `main` happens to hold. When
 you change anything, bump the version in all six manifests, re-hash the
-template, and cut a new tag - `scripts/check_manifests.py` fails the build if a
+template, and cut a new tag - `scripts/validate.py` fails the build if a
 document names a release the manifests do not declare.
 
 ## 4. Install it in Grok Bot
@@ -57,9 +57,9 @@ document names a release the manifests do not declare.
 Paste this to any Bot:
 
 > Set up the StrikeGrok trading desk from
-> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.1.0/skills/strikegrok-bootstrap/SKILL.md`.
+> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v2.0.0/skills/strikegrok-bootstrap/SKILL.md`.
 > Follow the bootstrap skill, use
-> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.1.0/SETUP.md` for the
+> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v2.0.0/SETUP.md` for the
 > complete runbook, and finish with its evidence receipt.
 
 The desk builds itself research-only: no token, no MCP write tool, no order.
@@ -106,4 +106,4 @@ set is the safest one.
 `template/grok-bot.json` is `ready-to-publish`. If you publish a public Desk Lead
 Bot from it, set `status` to `published`, add its `https://x.ai/bot/<id>` share
 URL as `publicShareUrl`, and put the same URL in `README.md` and `docs/FAQ.md` -
-`scripts/check_grok_template.py` enforces all three together.
+`scripts/validate.py` checks the template against the release it claims.

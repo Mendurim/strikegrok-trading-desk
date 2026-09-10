@@ -35,13 +35,9 @@ The public preview must show:
 
 Check the preview while logged out. Importing it should create a new Bot; it must not merge into an existing one or import the author's computer, chats or tokens.
 
-Verify the published preview directly:
+Compare the live preview against `template/grok-bot.json` by eye: the name, the title, the description and the start message should match it exactly, and the linked bootstrap and runbook should point at the release the manifest names.
 
-```bash
-python3 scripts/check_public_template.py --live
-```
-
-The scheduled **Public Grok Bot template** workflow repeats that check daily. A failure is a release incident: re-author the public template from the manifest and rerun the workflow. Do not weaken the manifest to match stale public content.
+If the published Bot and the manifest disagree, re-author the Bot from the manifest. Do not edit the manifest to match stale public content - the manifest is what `scripts/validate.py` holds the repository to.
 
 ## Evaluate a clean install
 

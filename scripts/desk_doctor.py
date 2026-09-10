@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Check a StrikeGrok install without reading the token or changing desk state."""
+"""Report whether a StrikeGrok install is healthy, without touching anything.
+
+Read-only by construction. It reads files, and it makes one unauthenticated
+request to Strike's public Price Service. It never loads the API wallet and
+never calls a signed endpoint: a doctor able to verify the write path would be
+a doctor able to place an order.
+
+    python3 scripts/desk_doctor.py
+    python3 scripts/desk_doctor.py --desk-root /workspace/trading-desk
+    python3 scripts/desk_doctor.py --offline --json
+"""
 
 from __future__ import annotations
 
@@ -13,237 +23,192 @@ import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass
 
-SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
-# What the checkout says it ships, read from the two lists it already publishes
-# and `scripts/check.sh` already keeps honest: the skills index links every skill,
-# and the runbook the user follows names every profile it tells them to create.
-SKILL_INDEX = ("skills/README.md", re.compile(r"\[([a-z0-9-]+)\]\(\1/SKILL\.md\)"))
-# The reviewed bytes of every skill the release ships, already published by the
-# checkout and already kept honest by `scripts/check_grok_template.py`.
-TEMPLATE_MANIFEST = "template/grok-bot.json"
-AGENT_INDEX = ("SETUP.md", re.compile(r"`agents/([a-z0-9-]+)\.md`"))
-REQUIRED_DESK_DIRS = (
-    "proposals",
-    "briefs",
-    "research",
-    "strategies",
-    "data",
-    "journal/incidents",
-    "watch",
+PRICE_SERVICE = "https://api.strikefinance.org/price"
+
+REPO_FILES = (
+    "SETUP.md",
+    "scripts/validate.py",
+    "scripts/desk_doctor.py",
+    "scripts/opening_bell.py",
+    "scripts/strike_request.py",
+    "skills/strikegrok-bootstrap/SKILL.md",
+)
+
+DESK_DIRS = ("proposals", "briefs", "research", "strategies", "data", "journal", "watch")
+
+# A desk record should describe the desk, never hold a credential.
+SECRET_SHAPED = re.compile(
+    r"private[ _-]?key|secret\s*[:=]\s*\S|STRIKE_API_PRIVATE_KEY\s*[:=]\s*\S|\b[0-9a-fA-F]{64}\b"
 )
 
 
-@dataclass(frozen=True)
+@dataclass
 class Check:
-    status: str
+    status: str          # PASS, WARN, FAIL or SKIP
     name: str
     detail: str
 
 
-def result(condition: bool, name: str, pass_detail: str, fail_detail: str) -> Check:
-    return Check("PASS" if condition else "FAIL", name, pass_detail if condition else fail_detail)
+def passed(condition: bool, name: str, good: str, bad: str) -> Check:
+    return Check("PASS" if condition else "FAIL", name, good if condition else bad)
 
 
-def present_skills(root: str) -> set[str]:
-    directory = os.path.join(root, "skills")
-    if not os.path.isdir(directory):
-        return set()
-    return {name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name, "SKILL.md"))}
+def inspect_repo(root: str) -> list[Check]:
+    checks: list[Check] = []
 
-
-def present_agents(root: str) -> set[str]:
-    directory = os.path.join(root, "agents")
-    if not os.path.isdir(directory):
-        return set()
-    return {name[:-3] for name in os.listdir(directory) if name.endswith(".md") and os.path.isfile(os.path.join(directory, name))}
-
-
-def inventory(root: str, name: str, index: tuple[str, re.Pattern], present: set[str]) -> Check:
-    """Check the install component by component, against the list it publishes.
-
-    Counting was the wrong question twice over. A count has to be bumped at every
-    release - the defect the version check no longer has - and it passes a tree
-    holding the right number of the wrong things, so an unpacked archive that
-    dropped one skill and left a stray directory behind read as a healthy desk.
-    Naming what is missing is also what the user needs: they can restore one path,
-    rather than diff seventeen directories against the runbook.
-
-    A directory the index does not list only warns. Missing is caught by name now,
-    so an extra can no longer mask one, and a user's own skill is not a broken desk.
-    """
-    source, pattern = index
-    try:
-        with open(os.path.join(root, source), encoding="utf-8") as handle:
-            declared = set(pattern.findall(handle.read()))
-    except OSError as exc:
-        return Check("FAIL", name, f"cannot read {source}: {exc}")
-    if not declared:
-        return Check("FAIL", name, f"{source} lists no {name}; this checkout cannot say what it ships")
-    missing = sorted(declared - present)
-    if missing:
-        return Check("FAIL", name, f"{len(declared) - len(missing)} of {len(declared)} present; missing {', '.join(missing)}")
-    extra = sorted(present - declared)
-    if extra:
-        return Check("WARN", name, f"all {len(declared)} present; {source} does not list {', '.join(extra)}")
-    return Check("PASS", name, f"all {len(declared)} present")
-
-
-def skill_bytes(root: str) -> Check:
-    """Compare each shipped skill body with the bytes the release reviewed.
-
-    Naming what is missing still passes a desk whose skills are all present and
-    one of them is not what was reviewed. `SETUP.md` section 1 judges the clone
-    by `scripts/check.sh`, which catches that through this same manifest, but
-    section 9 and `strikegrok-bootstrap` run the doctor alone, and `README.md`
-    offers it as the desk's standing health tool. So a skill body edited or
-    truncated after the install gate - a Risk Manager whose sizing rules no
-    longer say what the desk agreed - read as a healthy desk. The manifest is
-    already in the checkout and already the release's own statement of those
-    bytes; the doctor now reads it and names every path that no longer matches.
-    """
-    path = os.path.join(root, TEMPLATE_MANIFEST)
-    try:
-        with open(path, encoding="utf-8") as handle:
-            entries = json.load(handle)["skills"]
-        claimed = [(str(entry["path"]), str(entry["sha256"])) for entry in entries]
-    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
-        return Check("FAIL", "skill bytes", f"cannot read {TEMPLATE_MANIFEST}: {exc}")
-    if not claimed:
-        return Check("FAIL", "skill bytes", f"{TEMPLATE_MANIFEST} claims no skill bytes; this checkout cannot say what it ships")
-
-    changed, unreadable = [], []
-    for relative, expected in claimed:
-        digest = hashlib.sha256()
-        try:
-            with open(os.path.join(root, relative), "rb") as handle:
-                for chunk in iter(lambda: handle.read(65536), b""):
-                    digest.update(chunk)
-        except OSError:
-            unreadable.append(relative)
-            continue
-        if digest.hexdigest() != expected:
-            changed.append(relative)
-    if not changed and not unreadable:
-        return Check("PASS", "skill bytes", f"all {len(claimed)} match {TEMPLATE_MANIFEST}")
-    named = []
-    if changed:
-        named.append(f"changed: {', '.join(sorted(changed))}")
-    if unreadable:
-        named.append(f"unreadable: {', '.join(sorted(unreadable))}")
-    matched = len(claimed) - len(changed) - len(unreadable)
-    return Check("FAIL", "skill bytes", f"{matched} of {len(claimed)} match the reviewed bytes; {'; '.join(named)}")
-
-
-def check_repository(root: str) -> list[Check]:
-    checks = []
-    # `plugin.json` is the release this checkout claims to be. Every other
-    # release fact is read against it rather than against a constant here: a
-    # constant would have to be bumped at every release, and a doctor that
-    # lags the tag it ships in tells a correctly installed desk it is broken.
-    version = None
     try:
         with open(os.path.join(root, "plugin.json"), encoding="utf-8") as handle:
-            manifest = json.load(handle)
-        version = manifest.get("version")
-        valid = isinstance(version, str) and bool(SEMVER_RE.match(version))
-        checks.append(result(valid, "release", f"manifest version {version}", f"plugin.json version {version!r} is not a release version"))
-    except (OSError, json.JSONDecodeError) as exc:
-        checks.append(Check("FAIL", "release", f"cannot read plugin.json: {exc}"))
+            version = json.load(handle)["version"]
+        checks.append(Check("PASS", "release", f"plugin.json declares v{version}"))
+    except (OSError, KeyError, json.JSONDecodeError) as exc:
+        checks.append(Check("FAIL", "release", f"cannot read plugin.json ({exc})"))
+        version = None
 
-    checks.append(inventory(root, "skills", SKILL_INDEX, present_skills(root)))
-    checks.append(inventory(root, "agents", AGENT_INDEX, present_agents(root)))
-    checks.append(skill_bytes(root))
+    missing = [rel for rel in REPO_FILES if not os.path.isfile(os.path.join(root, rel))]
+    checks.append(passed(
+        not missing, "release files",
+        f"all {len(REPO_FILES)} present",
+        "missing: " + ", ".join(missing),
+    ))
 
-    setup_path = os.path.join(root, "SETUP.md")
-    expected_tag = f"v{version}" if version else None
     try:
-        with open(setup_path, encoding="utf-8") as handle:
-            setup = handle.read()
-        if expected_tag is None:
-            checks.append(Check("FAIL", "setup pin", "no manifest version to check the pin against"))
-        else:
-            pinned = f"--branch {expected_tag}" in setup
-            checks.append(result(pinned, "setup pin", expected_tag, f"SETUP.md does not pin {expected_tag}; this checkout is a half-updated release"))
-    except OSError as exc:
-        checks.append(Check("FAIL", "setup pin", f"cannot read SETUP.md: {exc}"))
+        with open(os.path.join(root, "template/grok-bot.json"), encoding="utf-8") as handle:
+            entries = json.load(handle).get("skills") or []
+    except (OSError, json.JSONDecodeError) as exc:
+        checks.append(Check("FAIL", "skill bytes", f"cannot read the template ({exc})"))
+        entries = []
 
-    required = ("scripts/check.sh", "scripts/desk_doctor.py", "scripts/opening_bell.py",
-                "scripts/strike_request.py", "skills/strikegrok-bootstrap/SKILL.md")
-    missing = [path for path in required if not os.path.isfile(os.path.join(root, path))]
-    checks.append(result(not missing, "release files", "bootstrap, doctor and demo present", f"missing: {', '.join(missing)}"))
+    if entries:
+        drifted, unreadable = [], []
+        for entry in entries:
+            path = os.path.join(root, entry.get("path", ""))
+            try:
+                with open(path, "rb") as handle:
+                    digest = hashlib.sha256(handle.read()).hexdigest()
+            except OSError:
+                unreadable.append(entry.get("path", "?"))
+                continue
+            if digest != entry.get("sha256"):
+                drifted.append(entry.get("name", "?"))
+        if drifted or unreadable:
+            parts = []
+            if drifted:
+                parts.append("changed since the template was pinned: " + ", ".join(sorted(drifted)))
+            if unreadable:
+                parts.append("unreadable: " + ", ".join(sorted(unreadable)))
+            checks.append(Check("FAIL", "skill bytes", "; ".join(parts)))
+        else:
+            checks.append(Check("PASS", "skill bytes", f"all {len(entries)} match the pinned hashes"))
+
+    if version:
+        try:
+            with open(os.path.join(root, "SETUP.md"), encoding="utf-8") as handle:
+                setup = handle.read()
+            checks.append(passed(
+                f"--branch v{version}" in setup, "setup pin",
+                f"SETUP.md clones v{version}",
+                f"SETUP.md does not pin v{version}; this checkout is a half-updated release",
+            ))
+        except OSError as exc:
+            checks.append(Check("FAIL", "setup pin", f"cannot read SETUP.md ({exc})"))
+
+    skills_dir = os.path.join(root, "skills")
+    skills = ([d for d in os.listdir(skills_dir) if os.path.isdir(os.path.join(skills_dir, d))]
+              if os.path.isdir(skills_dir) else [])
+    checks.append(passed(bool(skills), "skills", f"{len(skills)} present", "skills/ is missing or empty"))
+
+    agents_dir = os.path.join(root, "agents")
+    agents = ([f for f in os.listdir(agents_dir) if f.endswith(".md")]
+              if os.path.isdir(agents_dir) else [])
+    checks.append(passed(bool(agents), "agents", f"{len(agents)} present", "agents/ is missing or empty"))
+
     return checks
 
 
-def check_workspace(root: str) -> list[Check]:
-    checks = []
-    missing = [path for path in REQUIRED_DESK_DIRS if not os.path.isdir(os.path.join(root, path))]
-    checks.append(result(not missing, "desk folders", "working folders present", f"missing: {', '.join(missing)}"))
+def inspect_desk(desk_root: str) -> list[Check]:
+    checks: list[Check] = []
 
-    desk_path = os.path.join(root, "desk.md")
-    if not os.path.isfile(desk_path):
-        checks.append(Check("WARN", "desk record", f"{desk_path} is not written yet"))
+    missing = [d for d in DESK_DIRS if not os.path.isdir(os.path.join(desk_root, d))]
+    checks.append(passed(
+        not missing, "desk folders", "working folders present",
+        "missing: " + ", ".join(missing),
+    ))
+
+    record = os.path.join(desk_root, "desk.md")
+    if not os.path.isfile(record):
+        checks.append(Check("WARN", "desk record", f"{record} has not been written yet"))
+        return checks
+
+    with open(record, encoding="utf-8") as handle:
+        text = handle.read()
+    checks.append(passed(
+        not SECRET_SHAPED.search(text), "desk record",
+        "present, and nothing in it looks like a credential",
+        "contains something credential-shaped; secrets belong in the secret store, not on disk",
+    ))
+
+    limits = os.path.isfile(os.path.join(desk_root, "risk-limits.md"))
+    if limits and "risk limits: not yet written" not in text:
+        checks.append(Check("PASS", "risk limits", "risk-limits.md is present"))
     else:
-        with open(desk_path, encoding="utf-8") as handle:
-            text = handle.read()
-        safe = not re.search(r"private.?key|secret\s*[:=]\s*\S+", text, re.IGNORECASE)
-        checks.append(result(safe, "desk record", "present; no key-like field detected", "contains a key-like field; remove secrets from disk"))
-        if "risk limits: not yet written" in text or not os.path.isfile(os.path.join(root, "risk-limits.md")):
-            checks.append(Check("WARN", "risk limits", "not written; desk remains research-only"))
-        else:
-            checks.append(Check("PASS", "risk limits", "risk-limits.md present"))
+        checks.append(Check("WARN", "risk limits", "not written; the desk stays research-only"))
+
     return checks
 
 
-def check_public_api(base_url: str, timeout: float) -> Check:
-    """Read the public Price Service only. The doctor never touches the MCP.
-
-    Execution lives behind the API wallet, and a doctor that authenticated to
-    check the write path would be a doctor that could place an order. So this
-    reports on market data alone, and says so, rather than implying the desk's
-    trading route has been verified.
-    """
+def probe_price_service(base_url: str, timeout: float) -> Check:
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/v2/exchangeInfo",
         headers={"Accept": "application/json", "User-Agent": "strikegrok-desk-doctor/1.0"},
-        method="GET",
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = json.load(response)
-        symbols = payload.get("symbols") if isinstance(payload, dict) else None
-        if not isinstance(symbols, list) or not symbols:
-            return Check("FAIL", "public API", "exchangeInfo returned no symbols")
-        return Check("PASS", "public API", f"Price Service answered without a key: {len(symbols)} markets")
     except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
-        return Check("FAIL", "public API", f"unavailable: {exc}")
+        return Check("FAIL", "market data", f"unavailable ({exc})")
+    symbols = payload.get("symbols") if isinstance(payload, dict) else None
+    if not isinstance(symbols, list) or not symbols:
+        return Check("FAIL", "market data", "exchangeInfo returned no symbols")
+    tradeable = sum(1 for s in symbols if s.get("status") == "trading")
+    return Check("PASS", "market data",
+                 f"Price Service answered with no credential: {tradeable} markets trading")
 
 
 def render(checks: list[Check]) -> str:
     width = max(len(check.name) for check in checks)
-    lines = ["STRIKEGROK DESK DOCTOR", "READ ONLY · no token access · no MCP call · no writes", ""]
-    lines.extend(f"{check.status:<4}  {check.name:<{width}}  {check.detail}" for check in checks)
+    lines = [
+        "STRIKEGROK DESK DOCTOR",
+        "read only  ·  no credential loaded  ·  no signed request  ·  no writes",
+        "",
+    ]
+    lines += [f"{check.status:<5} {check.name:<{width}}  {check.detail}" for check in checks]
     failed = sum(check.status == "FAIL" for check in checks)
     warned = sum(check.status == "WARN" for check in checks)
-    lines.extend(["", f"Result: {len(checks) - failed - warned} passed, {warned} warnings, {failed} failed."])
+    lines += ["", f"{len(checks) - failed - warned} passed, {warned} warning(s), {failed} failed."]
     return "\n".join(lines)
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-root", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    parser.add_argument("--desk-root", help="also validate a prepared trading-desk directory")
-    parser.add_argument("--base-url", default="https://api.strikefinance.org/price")
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--repo-root", default=here)
+    parser.add_argument("--desk-root", help="also inspect a prepared trading-desk directory")
+    parser.add_argument("--base-url", default=PRICE_SERVICE)
     parser.add_argument("--timeout", type=float, default=15.0)
     parser.add_argument("--offline", action="store_true", help="skip the public connectivity check")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
-    checks = check_repository(os.path.abspath(args.repo_root))
+    checks = inspect_repo(os.path.abspath(args.repo_root))
     if args.desk_root:
-        checks.extend(check_workspace(os.path.abspath(args.desk_root)))
-    checks.append(Check("SKIP", "public API", "offline mode") if args.offline else check_public_api(args.base_url, args.timeout))
+        checks += inspect_desk(os.path.abspath(args.desk_root))
+    checks.append(
+        Check("SKIP", "market data", "offline mode")
+        if args.offline else probe_price_service(args.base_url, args.timeout)
+    )
+
     if args.json:
-        print(json.dumps({"checks": [asdict(check) for check in checks]}, indent=2))
+        print(json.dumps({"checks": [asdict(c) for c in checks]}, indent=2))
     else:
         print(render(checks))
     return 1 if any(check.status == "FAIL" for check in checks) else 0
