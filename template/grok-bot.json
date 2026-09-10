@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "status": "ready-to-publish",
+  "name": "StrikeGrok Desk Lead",
+  "title": "Seven-agent Strike Finance trading desk",
+  "description": "Builds and verifies a seven-agent Strike Finance trading desk from the reviewed StrikeGrok v1.0.0 release. Starts research-only on public market data: no token, no account read, no order.",
+  "author": "OWNER",
+  "avatar": "assets/mascot.jpg",
+  "startMessage": "Start the desk.",
+  "source": {
+    "repository": "https://github.com/OWNER/strikegrok-trading-desk",
+    "release": "v1.0.0",
+    "bootstrap": "https://github.com/OWNER/strikegrok-trading-desk/blob/v1.0.0/skills/strikegrok-bootstrap/SKILL.md",
+    "runbook": "https://github.com/OWNER/strikegrok-trading-desk/blob/v1.0.0/SETUP.md"
+  },
+  "skills": [
+    {
+      "name": "desk-execution-protocol",
+      "path": "skills/desk-execution-protocol/SKILL.md",
+      "sha256": "488f1b0740788bf64c486ec22f2bcda4515112d02cb29f002c1b7e4833fcb32d"
+    },
+    {
+      "name": "desk-incident-response",
+      "path": "skills/desk-incident-response/SKILL.md",
+      "sha256": "a2cf40e1e895fc5c1b8c5b8fe4a975b8218ad8797b774cfed7f036e5778c532e"
+    },
+    {
+      "name": "desk-monitoring",
+      "path": "skills/desk-monitoring/SKILL.md",
+      "sha256": "31b49f933d5a1d8ee892999543f908bce14c5f4b155b55de09017940ecffed32"
+    },
+    {
+      "name": "desk-operating-model",
+      "path": "skills/desk-operating-model/SKILL.md",
+      "sha256": "819158c8a118a9bcecaa75f4b6ddfc180da39528872bbc279a4f184b29b29e04"
+    },
+    {
+      "name": "desk-post-trade-review",
+      "path": "skills/desk-post-trade-review/SKILL.md",
+      "sha256": "d2782fcf6bf9e196fe080aac0f8eda9ebe928724ce6b8d4803d064af5bc6c19d"
+    },
+    {
+      "name": "desk-risk-limits",
+      "path": "skills/desk-risk-limits/SKILL.md",
+      "sha256": "24a8f9e50eee740805835642f0e87c730e9554d28bcccc3b563be97838d40ebe"
+    },
+    {
+      "name": "desk-strategy-lab",
+      "path": "skills/desk-strategy-lab/SKILL.md",
+      "sha256": "667b5b6746f2c5ad80addbcac755f86faf032e9eda5fd0344a72c0b19fd16227"
+    },
+    {
+      "name": "desk-trade-lifecycle",
+      "path": "skills/desk-trade-lifecycle/SKILL.md",
+      "sha256": "e21140a99da7a6bd15b8de478055de5daa6ba1de4303a2f859bf4e2ee42c2ca5"
+    },
+    {
+      "name": "strike-account",
+      "path": "skills/strike-account/SKILL.md",
+      "sha256": "ac71e3a41d5a30e5ea94b94b5fe1d93267959c69e27bc0c760c0c9daa9fe4567"
+    },
+    {
+      "name": "strike-api-reference",
+      "path": "skills/strike-api-reference/SKILL.md",
+      "sha256": "4ccf0a71bed0f6155c385ceeb19c411b36cd419ee9b135deb962d775c5bdbf17"
+    },
+    {
+      "name": "strike-market-data",
+      "path": "skills/strike-market-data/SKILL.md",
+      "sha256": "1d9bfc6e443c4712e575059bfc563c38890a2579232786c24dd61d6157cb1de1"
+    },
+    {
+      "name": "strike-mcp",
+      "path": "skills/strike-mcp/SKILL.md",
+      "sha256": "3ed7210a2a63017b43798534ee98082b64b50cc80f84b7b5ebd897708bb04a0c"
+    },
+    {
+      "name": "strike-orders",
+      "path": "skills/strike-orders/SKILL.md",
+      "sha256": "f9bc8d220e20591dc2af8723c94cbd2b0c76d71e33ce19516c137091186fd934"
+    },
+    {
+      "name": "strike-positions",
+      "path": "skills/strike-positions/SKILL.md",
+      "sha256": "fc409e610e6405592e3ae46762e5ddc0f62f0656a545ca2c5e13fc5ce3931227"
+    },
+    {
+      "name": "strike-research-tools",
+      "path": "skills/strike-research-tools/SKILL.md",
+      "sha256": "27fc5a8f40d2f3ccc9a9d7535642fcbcdf6c41154d70256db7793ea04f55e6b3"
+    },
+    {
+      "name": "strike-setup",
+      "path": "skills/strike-setup/SKILL.md",
+      "sha256": "97af154152cd19c696fcaa84ef79db5d0d32e2c7e2564da8ef39f23c3caf0623"
+    },
+    {
+      "name": "strike-websocket",
+      "path": "skills/strike-websocket/SKILL.md",
+      "sha256": "ec61acf424bf613c5e511fc2bad14bb72d5d76ba1bb643951fb4813ecfee0c7f"
+    },
+    {
+      "name": "strikegrok-bootstrap",
+      "path": "skills/strikegrok-bootstrap/SKILL.md",
+      "sha256": "a5a08f8b741446adedbfcebe2b0e268270b56f3aa925746f463c1ea141f0c396"
+    }
+  ],
+  "plugins": [],
+  "memories": [],
+  "routines": []
+}

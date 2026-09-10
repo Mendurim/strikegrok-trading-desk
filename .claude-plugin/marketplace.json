@@ -1,0 +1,26 @@
+{
+  "name": "strikegrok",
+  "owner": {
+    "name": "OWNER",
+    "email": "owner@example.com"
+  },
+  "metadata": {
+    "description": "Strike Finance trading desk roles and skills",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "strikegrok",
+      "source": "./",
+      "description": "Turn your agent into a 7-role Strike Finance trading desk: research, risk, execution and review.",
+      "version": "1.0.0",
+      "author": {
+        "name": "OWNER"
+      },
+      "homepage": "https://github.com/OWNER/strikegrok-trading-desk",
+      "repository": "https://github.com/OWNER/strikegrok-trading-desk",
+      "license": "MIT",
+      "keywords": ["strike-finance", "cardano", "perpetuals", "trading-desk", "agents", "grok-bot", "mcp"]
+    }
+  ]
+}

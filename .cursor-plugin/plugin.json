@@ -1,0 +1,16 @@
+{
+  "name": "strikegrok",
+  "description": "Strike Finance trading desk roles and skills.",
+  "version": "1.0.0",
+  "author": {
+    "name": "OWNER"
+  },
+  "homepage": "https://github.com/OWNER/strikegrok-trading-desk",
+  "repository": "https://github.com/OWNER/strikegrok-trading-desk",
+  "license": "MIT",
+  "logo": "assets/mascot-320.jpg",
+  "keywords": ["grok-bot", "strike-finance", "cardano", "perpetuals", "trading-desk", "agents", "mcp"],
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "rules": "./rules/"
+}
