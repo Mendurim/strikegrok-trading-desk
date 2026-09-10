@@ -8,7 +8,7 @@ If your runtime loaded this repository as a plugin, invoke `strikegrok-bootstrap
 
 ```bash
 mkdir -p /workspace && cd /workspace
-git clone --depth 1 --branch v3.0.1 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
+git clone --depth 1 --branch v3.0.2 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
 cd /workspace/strikegrok && git rev-parse HEAD && bash scripts/check.sh
 ```
 
@@ -96,11 +96,78 @@ Post this as the first message in the group:
 
 ## 7. Approvals
 
-Ask the user to open **Settings, General, Auto-review** and add a **Require Approval** rule for financial actions and for commands that call the Strike exchange endpoint. If the rule syntax cannot express that exactly, say so; the desk's own protocol still holds: the Execution Trader sends only after the user writes "approve <ticket id>" in chat. Exchange writes always stay behind approval.
+Two controls, and they are not alternatives. Set up both.
 
-That rule is the gate. The approval phrase in chat is the desk's record that the user agreed, but the Bots write the floor's messages, so it cannot be the only thing standing in the way of a send. Set the rule up here, not later.
+### 7a. The platform rule
 
-Then ask the user one question: **may the desk place a protective stop for a position that has none, without waiting for approval?** It is reduce-only, so it can only reduce exposure, and the alternative is a naked position waiting on someone to read a message. If yes, record it in `desk.md` under `standing approvals` with the date. If no, record that too, along with how long the desk should chase them before telling them to fix it in the Strike app themselves.
+Ask the user to open **Settings, General, Auto-review** and add a **Require Approval** rule for financial actions and for commands that call `scripts/strike_request.py`. If the rule syntax cannot express that exactly, say so; the desk's own protocol still holds: the Execution Trader sends only after the user writes `approve <ticket id>` in chat.
+
+Be clear with the user about the limit of this rule. It gates what goes through the chat. A Bot that runs `python3 scripts/strike_request.py` directly, with the API wallet already in its environment, does not pass through the chat. On a shared workspace that is not a hypothetical — it is the ordinary shape of the tool. Which is why 7b exists.
+
+### 7b. The signing key — what makes an approval checkable
+
+Until a public key is on the desk, `scripts/desk_policy.py` will sign an opening order on nothing more than a `RISK | … | PASS` block in a proposal file, and any Bot can write one of those. Run `python3 scripts/desk_policy.py verify` and it will tell you so:
+
+```
+mode: attended
+WARNING: in attended mode nothing in this code verifies an approval...
+```
+
+Fixing that is one file. **The private half never touches the desk computer** — that is the entire point, so do these two commands wherever the user actually is, not on the desk.
+
+```bash
+# on the USER'S OWN machine, once
+python3 scripts/desk_policy.py keygen --out ~/.strikegrok/user-signing
+#   -> ~/.strikegrok/user-signing      the private key. It stays here. Back it up offline.
+#   -> ~/.strikegrok/user-signing.pub  the public key. This one goes to the desk.
+
+# copy ONLY the .pub to the desk computer
+scp ~/.strikegrok/user-signing.pub <desk>:/workspace/trading-desk/desk/user-signing.pub
+```
+
+Then, on the desk:
+
+```bash
+python3 scripts/desk_policy.py verify
+```
+
+It should now print `mode: unattended`, `state trusted: no (Tier 1 off)`, the ceilings actually in force, and a line saying opening exposure needs a signed per-trade token. The state directory is created on first use, mode `0700`; you do not have to make it.
+
+That is the whole change, and here is what it buys, verified rather than asserted:
+
+| | before the key | after the key |
+| --- | --- | --- |
+| a Bot writes a PASS block and sends | **allowed** | refused: `signature: SG-….json is missing` |
+| the user signs the ticket | — | allowed, `tier2` |
+| a Bot re-signs the token with its own key | — | refused: `does not verify under the user's key` |
+| a Bot edits the size after the user signed | — | refused: `does not verify under the user's key` |
+
+Note the third and fourth rows. The signature covers the token's bytes, so changing the size, the price, the symbol or the proposal id after signing invalidates it. A Bot can read the token and cannot alter or forge it.
+
+### 7c. Approving a trade, once the key is installed
+
+The Desk Lead shows the ticket in full, as always. Then, **on the user's own machine**, write the token and sign it:
+
+```bash
+cat > SG-20260912-07.json <<'JSON'
+{"proposal": "SG-20260912-07", "symbol": "BTC-USD", "side": "long",
+ "size": "0.013", "price": "77120", "expires": "2026-09-12T15:00:00Z"}
+JSON
+python3 scripts/desk_policy.py sign --key ~/.strikegrok/user-signing --file SG-20260912-07.json
+scp SG-20260912-07.json SG-20260912-07.json.sig <desk>:/workspace/trading-desk/approvals/
+```
+
+The fields must equal the ticket the Risk Manager passed; the policy layer compares them exactly, as decimals. `expires` is yours to set — thirty minutes is the desk's default, and an expired token is refused rather than nudged along. A token is single-use: once it has been sent it cannot be replayed, at the desk or at the venue.
+
+Keep typing `approve SG-…` in chat as well. It is the desk's written record of what you agreed and when, and the Trade Reviewer reads it. The signature is the lock; the chat line is the receipt.
+
+### 7d. Standing approvals — later, and only if the split is real
+
+Tier 1 lets a frozen, tested rule fire at 03:00 with nobody awake. It is worth having, and it is not a step-6 decision — it needs a rule with a live record, and it relies on `desk/policy-state` being a boundary the Bots cannot edit, which is only true when this script runs as its own OS user. **On Grok Bot it does not.** Tier 1 therefore refuses unless the operator sets `STRIKEGROK_STATE_TRUSTED=1`, and setting that flag on a shared box asserts something false. Leave it unset. `desk-standing-approvals` is the full procedure when the separation is real.
+
+### 7e. The one standing approval worth having on day one
+
+Ask the user: **may the desk place a protective stop for a position that has none, without waiting for approval?** It is reduce-only, so it can only reduce exposure, and the alternative is a naked position waiting on someone to read a message. This is Tier 0 and needs no key and no token. If yes, record it in `desk.md` under `standing approvals` with the date. If no, record that too, along with how long the desk should chase them before telling them to fix it in the Strike app themselves.
 
 ## 8. Write the desk record
 

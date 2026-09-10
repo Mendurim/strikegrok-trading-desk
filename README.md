@@ -14,9 +14,9 @@ Market data comes from Strike's **public REST Price Service**; execution goes th
 
 Open Grok Bot and paste this to any Bot:
 
-> Set up the StrikeGrok trading desk from https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.1/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.1/SETUP.md for the complete runbook, and finish with its evidence receipt.
+> Set up the StrikeGrok trading desk from https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.2/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.2/SETUP.md for the complete runbook, and finish with its evidence receipt.
 
-The desk starts in research mode. The first demo uses only Strike's public Price Service: no token, no account read, no order. Connect the MCP when you are ready to trade.
+The desk starts in research mode. The first demo uses only Strike's public Price Service: no key, no account read, no order. Register a Strike API wallet when you are ready to trade.
 
 ### Opening Bell
 
@@ -50,7 +50,7 @@ idea -> evidence -> risk sign-off -> your approval -> dry run -> one send -> rec
 
 **"Brief me on ADA."** The Market Analyst pulls mid, mark, index, funding, open interest, 24h volume and depth at 5/10/25 bps from the Price Service, and posts a brief with sources and UTC times.
 
-**"I want to long ADA at 0.21 with a stop at 0.1995."** The Desk Lead opens `SG-20260910-01`, the Risk Manager reads your account live through the MCP and comes back with a ticket:
+**"I want to long ADA at 0.21 with a stop at 0.1995."** The Desk Lead opens `SG-20260910-01`, the Risk Manager reads your account live through Strike's signed API and comes back with a ticket:
 
 ```
 TICKET SG-20260910-01 | ADA-USD
@@ -71,22 +71,41 @@ Eighteen skills, in the portable `SKILL.md` format, shared by all your Bots.
 
 **Bootstrap** — pinned release install, Opening Bell, team construction, desk doctor and a receipt that distinguishes what happened from what still needs a manual step.
 
-**Strike** — the two surfaces and the symbol map, the MCP transport and its twenty-two tools, market data, account state, orders (market, limit, brackets with attached TP/SL, triggers, cancels), positions and leverage, WebSocket feeds, the research tools, and a compact API reference. Copy-pasteable `curl` for reads; JSON-RPC tool calls for anything that writes.
+**Strike** — the two surfaces and the symbol map, the API wallet signing scheme, market data, account state, orders (market, limit, brackets with attached TP/SL, triggers, cancels), positions and leverage, WebSocket feeds, the research tools, and a compact API reference. Copy-pasteable `curl` for reads; one signed request per write, through `scripts/strike_request.py`.
 
 **Desk** — how the team works: operating model, the trade lifecycle and ticket, risk limits and sizing arithmetic, the execution protocol, monitoring and routines, post-trade review, incident playbooks, and the strategy lab.
 
 ## Built for real money
 
-- **You approve every trade**, by ticket id, after seeing the exact order. The line you type is evidence; the gate that enforces it sits outside the chat, in Grok Bot's own Require Approval rule, because a Bot that can read an approval could also write one.
+- **Nothing opens exposure without an approval the code can check.** `scripts/desk_policy.py` runs inside the one script that holds your API wallet, on every write, before it is signed. A Bot that can read an approval could also write one, so the layer does not read approvals from the chat: it verifies an Ed25519 signature made with a key that never touches the desk computer. See [the policy layer](#the-policy-layer) below.
+- **Every opening order carries its own stop.** The layer refuses a naked entry, a stop that is not reduce-only, a stop on the wrong side of the entry, and a stop that would lose more than the ticket says the trade risks.
 - **Every order is previewed before it is sent.** The desk builds the exact request as a file, posts it to you verbatim, and sends that same file. The bytes you approved are the bytes that go.
 - **Sized on a stressed stop.** A triggered stop is a market order: it slips and pays taker on both legs. The desk sizes on what the stop will actually cost, not its trigger price, so your risk budget means what it says.
-- **Ceilings you cannot trade through.** Your limits file may only tighten the desk's own caps, never loosen them, and the MCP enforces a per-symbol leverage cap no Bot can bypass.
+- **Ceilings you cannot trade through.** Your limits file may only tighten the desk's own caps, never loosen them, and the caps compiled into the policy layer refuse a notional over $5,000 or over one times your equity, leverage over 5, a position opened past a 3% daily loss, a fourth open position, and a second order inside a minute. Environment variables may tighten every one of those and loosen none.
 - **One writer.** Six Bots read; one Bot sends, once per approval, and reconciles from the exchange record.
 - **A reviewer who keeps you honest.** Process and outcome graded separately, in a journal you can read.
 
+## The policy layer
+
+Every Bot on the desk shares one computer and one filesystem. So a Bot can write to the desk record, to a proposal file, and to the floor — which means any approval a Bot can read is one a Bot could have composed. The only enforcement that survives that is inside `scripts/strike_request.py`, the one thing holding the API wallet.
+
+`scripts/desk_policy.py` is that enforcement, and it runs on every non-GET before signing. Three tiers:
+
+| Tier | What | Approval |
+| --- | --- | --- |
+| **0** | reduce-only: place or tighten a stop, exit on a rule's invalidation, cancel an orphaned or expired order, add margin | none needed — it can only shrink exposure |
+| **1** | open exposure when a frozen, tested rule fires | a standing approval in a register you signed |
+| **2** | open exposure on anything else | a per-trade token you signed |
+
+**The desk ships with no key installed, and that mode is honest about what it is.** With no `desk/user-signing.pub`, a `RISK | … | PASS` block is markdown any Bot can write, and that is all the layer requires before it will sign an opening order. The only approval control is Grok Bot's Require Approval rule, which lives in chat — and a Bot that runs `scripts/strike_request.py` directly with the wallet in its environment never passes through chat. The layer logs every such send as `WARN`, and `desk_policy.py verify` says so in as many words.
+
+**Installing one file changes that.** Generate a key pair on your own machine, copy only the public half to the desk, and from that moment no order can open exposure without a signature the desk cannot produce. `SETUP.md` step 7 is the runbook; it takes about a minute.
+
+Standing approvals (Tier 1) go further and let a tested rule fire at 03:00 with nobody awake — but they rely on a state directory that is only a real boundary when the signer runs as its own OS user. On a shared Grok workspace it does not, so Tier 1 stays off unless you set `STRIKEGROK_STATE_TRUSTED=1` to assert otherwise. Leave it unset and trade at Tier 2 until that separation is real.
+
 ### Two things this desk is honest about
 
-**Strike has no dry-run mode.** The MCP-based version of this desk had one in the transport; the direct API does not. The desk replaces it with a preview block: every request is built as a file, posted to you verbatim, and that same file is sent. It is a discipline rather than a gate, so the Require Approval rule in Grok Bot matters more, not less.
+**Strike has no dry-run mode.** An earlier version of this desk had one in its transport; the signed API does not. The desk replaces it with a preview block: every request is built as a file, posted to you verbatim, and that same file is sent. It is a discipline rather than a gate, so the Require Approval rule in Grok Bot matters more, not less.
 
 **Strike has no order expiry.** An order cannot age out into safety, so elapsed time never proves a lost send is dead. What the desk relies on instead is a `client_order_id` it chooses before every send, and an endpoint that answers whether that exact order exists - so a lost response is a lookup, not a guess. A replacement always gets a fresh id.
 

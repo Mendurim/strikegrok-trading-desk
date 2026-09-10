@@ -1325,6 +1325,11 @@ def _cmd_verify(policy: Policy) -> int:
               "in its environment never passes through chat. Installing v3 does not make an "
               "unsigned open impossible; installing a public key and using tokens does.")
         return 0
+    if not policy.register.exists():
+        print("no standing-approval register installed, so Tier 1 is not in use. Opening exposure "
+              "needs a per-trade token signed with the key whose public half is on this desk. "
+              "That is the right shape for a desk whose Bots share an OS user with this script.")
+        return 0
     if policy.state_trusted:
         print("WARNING: STRIKEGROK_STATE_TRUSTED=1 is set. That asserts this signer runs as its "
               "own OS user, separate from the Bots. On a shared workspace where the Bots and this "

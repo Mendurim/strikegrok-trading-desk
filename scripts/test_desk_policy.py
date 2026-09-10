@@ -1135,6 +1135,47 @@ class TestSingleUserBox(unittest.TestCase):
             self.desk.policy().check("POST", "/v2/order/strategy", Desk.body())["tier"], "tier1")
 
 
+class TestVerifyReporting(unittest.TestCase):
+    """`verify` is the first thing a user runs after following SETUP step 7. What
+    it prints has to be true, and a Tier-2-only desk is not a broken desk."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        os.environ.pop("STRIKEGROK_STATE_TRUSTED", None)
+        os.environ.pop("STRIKEGROK_POLICY_STATE", None)
+        self.addCleanup(lambda: os.environ.pop("STRIKEGROK_STATE_TRUSTED", None))
+        self.desk = Desk(self._tmp.name, signed=False)
+
+    def run_verify(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = desk_policy._cmd_verify(self.desk.policy())
+        return code, out.getvalue()
+
+    def test_a_desk_with_no_key_reports_attended_and_warns(self):
+        code, text = self.run_verify()
+        self.assertEqual(code, 0)
+        self.assertIn("mode: attended", text)
+        self.assertIn("WARNING", text)
+
+    def test_a_tier_two_desk_is_not_reported_as_a_failure(self):
+        """A desk that signs per-trade tokens has no standing-approval register.
+        Reporting that as REFUSE tells the user their setup failed when it did not."""
+        (self.desk.root / "desk/user-signing.pub").write_bytes(
+            Path(str(self.desk.key) + ".pub").read_bytes())
+        code, text = self.run_verify()
+        self.assertEqual(code, 0)
+        self.assertIn("mode: unattended", text)
+        self.assertNotIn("REFUSE", text)
+        self.assertIn("per-trade token", text)
+
+    def test_the_ceilings_line_names_every_enforced_bound(self):
+        _, text = self.run_verify()
+        for name in desk_policy.effective_ceilings():
+            self.assertIn(name, text)
+
+
 class TestBlackouts(PolicyCase):
     """The catalyst clock, in code. The Research Analyst writes the window; the
     layer keeps it even if the file is deleted."""
