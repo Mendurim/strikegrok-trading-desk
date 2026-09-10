@@ -15,7 +15,7 @@ import re
 import sys
 
 CANONICAL_NAME = "strikegrok"
-REPOSITORY = "https://github.com/OWNER/strikegrok-trading-desk"
+REPOSITORY = "https://github.com/mendurim/strikegrok-trading-desk"
 
 MANIFESTS = [
     "plugin.json",

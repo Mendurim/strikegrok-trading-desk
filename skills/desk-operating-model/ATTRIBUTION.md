@@ -19,7 +19,7 @@ A source link in your README, documentation or acknowledgements helps people fin
 You can adapt this Markdown to describe what you actually reused:
 
 ```markdown
-Based on [StrikeGrok Trading Desk](https://github.com/OWNER/strikegrok-trading-desk),
+Based on [StrikeGrok Trading Desk](https://github.com/mendurim/strikegrok-trading-desk),
 a port of [HyperGrok Trading Desk](https://github.com/galleonlabs/hypergrok-trading-desk)
 by [Andrew Wilkinson](https://andrewwilkinson.io) and
 [Galleon Labs](https://github.com/galleonlabs). Used under the MIT license.

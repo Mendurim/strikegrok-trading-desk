@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 
-REPOSITORY = "https://github.com/OWNER/strikegrok-trading-desk"
+REPOSITORY = "https://github.com/mendurim/strikegrok-trading-desk"
 TEMPLATE = "template/grok-bot.json"
 PUBLIC_URL_RE = re.compile(r"https://x\.ai/bot/[A-Za-z0-9_-]+$")
 

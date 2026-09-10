@@ -14,7 +14,7 @@ Market data comes from Strike's **public REST Price Service**; execution goes th
 
 Open Grok Bot and paste this to any Bot:
 
-> Set up the StrikeGrok trading desk from https://github.com/OWNER/strikegrok-trading-desk/blob/v1.0.0/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/OWNER/strikegrok-trading-desk/blob/v1.0.0/SETUP.md for the complete runbook, and finish with its evidence receipt.
+> Set up the StrikeGrok trading desk from https://github.com/mendurim/strikegrok-trading-desk/blob/v1.0.0/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/mendurim/strikegrok-trading-desk/blob/v1.0.0/SETUP.md for the complete runbook, and finish with its evidence receipt.
 
 The desk starts in research mode. The first demo uses only Strike's public Price Service: no token, no account read, no order. Connect the MCP when you are ready to trade.
 
@@ -99,7 +99,7 @@ The same `agents/`, `skills/` and `rules/` load as a plugin: nineteen skills, an
 In Claude Code, install it from this repository:
 
 ```
-/plugin marketplace add OWNER/strikegrok-trading-desk
+/plugin marketplace add mendurim/strikegrok-trading-desk
 /plugin install strikegrok@strikegrok
 ```
 
@@ -108,10 +108,10 @@ In Grok Build and Cursor, open the repository and enable the plugin.
 The same pack installs as a skill:
 
 ```
-npm exec --package=skills@1.5.23 -- skills add OWNER/strikegrok-trading-desk
+npm exec --package=skills@1.5.23 -- skills add mendurim/strikegrok-trading-desk
 ```
 
-Live listing: [skills.sh](https://www.skills.sh/OWNER/strikegrok-trading-desk)
+Live listing: [skills.sh](https://www.skills.sh/mendurim/strikegrok-trading-desk)
 
 Either way, run `/desk-operating-model` to begin.
 

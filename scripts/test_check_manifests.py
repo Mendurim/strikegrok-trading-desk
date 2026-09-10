@@ -93,14 +93,14 @@ def replace(root, rel, old, new):
 
 def documented_marketplace_typo(root):
     replace(root, "README.md",
-            "/plugin marketplace add OWNER/strikegrok-trading-desk",
-            "/plugin marketplace add OWNER/strikegrok")
+            "/plugin marketplace add mendurim/strikegrok-trading-desk",
+            "/plugin marketplace add mendurim/strikegrok")
     return "README.md", "/plugin marketplace add"
 
 
 def documented_install_id_typo(root):
     replace(root, "SETUP.md", "/plugin install strikegrok@strikegrok",
-            "/plugin install strikegrok@OWNER")
+            "/plugin install strikegrok@mendurim")
     return "SETUP.md", "/plugin install"
 
 
@@ -115,8 +115,8 @@ def documented_skills_sh_plugin_slug(root):
     replace(
         root,
         "README.md",
-        "https://www.skills.sh/OWNER/strikegrok-trading-desk)",
-        "https://www.skills.sh/OWNER/strikegrok-trading-desk/strikegrok)",
+        "https://www.skills.sh/mendurim/strikegrok-trading-desk)",
+        "https://www.skills.sh/mendurim/strikegrok-trading-desk/strikegrok)",
     )
     return "README.md", "is not a skill"
 
@@ -125,8 +125,8 @@ def documented_skills_add_typo(root):
     replace(
         root,
         "README.md",
-        "skills add OWNER/strikegrok-trading-desk",
-        "skills add OWNER/strikegrok",
+        "skills add mendurim/strikegrok-trading-desk",
+        "skills add mendurim/strikegrok",
     )
     return "README.md", "'skills add'"
 
