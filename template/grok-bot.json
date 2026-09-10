@@ -3,15 +3,15 @@
   "status": "ready-to-publish",
   "name": "StrikeGrok Desk Lead",
   "title": "Seven-agent Strike Finance trading desk",
-  "description": "Builds and verifies a seven-agent Strike Finance trading desk from the reviewed StrikeGrok v3.0.1 release. Starts research-only on public market data: no token, no account read, no order.",
+  "description": "Builds and verifies a seven-agent Strike Finance trading desk from the reviewed StrikeGrok v3.0.2 release. Starts research-only on public market data: no token, no account read, no order.",
   "author": "Mendurim",
   "avatar": "assets/mascot.jpg",
   "startMessage": "Start the desk.",
   "source": {
     "repository": "https://github.com/Mendurim/strikegrok-trading-desk",
-    "release": "v3.0.1",
-    "bootstrap": "https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.1/skills/strikegrok-bootstrap/SKILL.md",
-    "runbook": "https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.1/SETUP.md"
+    "release": "v3.0.2",
+    "bootstrap": "https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.2/skills/strikegrok-bootstrap/SKILL.md",
+    "runbook": "https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.2/SETUP.md"
   },
   "skills": [
     {
@@ -117,7 +117,7 @@
     {
       "name": "strikegrok-bootstrap",
       "path": "skills/strikegrok-bootstrap/SKILL.md",
-      "sha256": "b1fc0ae4fb159acb683ab93b59e460de5366c6b462ecfbef602b5a047b6b3071"
+      "sha256": "10e77543530a16b54a900fb5d00c25466bd21827905270243477338609ce263c"
     }
   ],
   "plugins": [],

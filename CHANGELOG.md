@@ -2,6 +2,18 @@
 
 All notable changes to StrikeGrok are recorded here. Versions follow the release tags the bootstrap skill pins.
 
+## v3.0.2
+
+The documentation caught up with the code. Two releases added a policy layer, three tiers and a signing key, and `README.md` changed by two lines - the version pin - while never mentioning any of it. A reader of the front page still met the desk as it was before v3.
+
+- **`README.md`** now describes the policy layer: the three tiers, what ships enabled, and the one file that turns "any Bot's PASS block opens a position" into "no open without a signature". Five stale references to executing through the crowdtime MCP are gone; the desk has signed its own requests since v1.1.
+- **`SETUP.md` step 7** was one paragraph about a chat rule. It is now the runbook it should always have been: the platform rule and the limit of what it can gate, generating the key pair on the user's own machine, copying only the public half, what that buys in a before-and-after table, and how to sign a ticket. Written by running it and correcting what did not work.
+
+Two defects that runbook found, which would otherwise have shipped:
+
+- The documented `desk_policy.py init` no longer exists - the state directory has been created on first use since v3.0.0. The step is gone. Nothing was broken, but a user following the runbook would have hit an error on their first command.
+- `desk_policy.py verify` reported a Tier-2-only desk as `REFUSE signature: standing-approvals.json is missing`, exit 2. A desk that approves each trade with a signed token has no standing-approval register, and on a shared workspace that is the recommended shape rather than a failure. It now says so and exits 0.
+
 ## v3.0.1
 
 Six defects found by review of the v3.0.0 policy layer, each reproduced against the code before it was changed.

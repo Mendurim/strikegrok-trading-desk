@@ -42,7 +42,7 @@ Market data is the **public Price Service**; everything else is the **signed tra
 
 ## Conventions
 
-Each skill's `metadata.version` is that skill's own, not the release tag. A skill at `1.0.1` inside release `v3.0.1` has simply not needed changing; the release the desk was built from is the tag the bootstrap skill clones.
+Each skill's `metadata.version` is that skill's own, not the release tag. A skill at `1.0.1` inside release `v3.0.2` has simply not needed changing; the release the desk was built from is the tag the bootstrap skill clones.
 
 - Frontmatter: `name` (matches the directory), `description` (what and when, under 1024 characters), `license`, `metadata` (`version`, `author`, `category`, and `network-default` for Strike skills).
 - Bodies: purpose, concepts, copy-pasteable commands (`curl` for public reads, `scripts/strike_request.py` for signed calls), procedure, pitfalls. No strategy content, no return claims, no emoji.
