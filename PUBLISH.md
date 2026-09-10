@@ -5,14 +5,14 @@ live under your own GitHub account before the desk can be installed from it.
 
 ## 1. The repository owner
 
-This release is already set to **`mendurim/strikegrok-trading-desk`** throughout:
+This release is already set to **`Mendurim/strikegrok-trading-desk`** throughout:
 manifests, docs, the pinned template and the release checkers.
 
 If you fork it to another account, substitute once and re-check:
 
 ```bash
 GH_OWNER=your-github-username
-grep -rl mendurim --exclude-dir=.git . | xargs sed -i "s/mendurim/$GH_OWNER/g"
+grep -rl Mendurim --exclude-dir=.git . | xargs sed -i "s/Mendurim/$GH_OWNER/g"
 python3 scripts/rehash_template.py
 bash scripts/check.sh
 ```
@@ -42,7 +42,7 @@ bash scripts/check.sh
 
 ```bash
 git add -A && git commit -m "StrikeGrok v1.0.0"
-gh repo create "$GH_mendurim/strikegrok-trading-desk" --public --source=. --push
+gh repo create "$GH_OWNER/strikegrok-trading-desk" --public --source=. --push
 git tag -a v1.0.0 -m "StrikeGrok v1.0.0" && git push --tags
 ```
 
@@ -57,9 +57,9 @@ document names a release the manifests do not declare.
 Paste this to any Bot:
 
 > Set up the StrikeGrok trading desk from
-> `https://github.com/mendurim/strikegrok-trading-desk/blob/v1.0.0/skills/strikegrok-bootstrap/SKILL.md`.
+> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.0.0/skills/strikegrok-bootstrap/SKILL.md`.
 > Follow the bootstrap skill, use
-> `https://github.com/mendurim/strikegrok-trading-desk/blob/v1.0.0/SETUP.md` for the
+> `https://github.com/Mendurim/strikegrok-trading-desk/blob/v1.0.0/SETUP.md` for the
 > complete runbook, and finish with its evidence receipt.
 
 The desk builds itself research-only: no token, no MCP write tool, no order.

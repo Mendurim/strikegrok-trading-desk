@@ -2,9 +2,9 @@
   "name": "strikegrok",
   "version": "1.0.0",
   "description": "Strike Finance trading desk roles and skills for Grok Bot and Grok Build.",
-  "author": {"name": "mendurim", "url": "https://github.com/mendurim/strikegrok-trading-desk"},
-  "homepage": "https://github.com/mendurim/strikegrok-trading-desk",
-  "repository": "https://github.com/mendurim/strikegrok-trading-desk",
+  "author": {"name": "Mendurim", "url": "https://github.com/Mendurim/strikegrok-trading-desk"},
+  "homepage": "https://github.com/Mendurim/strikegrok-trading-desk",
+  "repository": "https://github.com/Mendurim/strikegrok-trading-desk",
   "license": "MIT",
   "keywords": ["strike-finance", "cardano", "perpetuals", "trading-desk", "agents", "grok-bot", "mcp"]
 }

@@ -3,11 +3,11 @@
   "description": "Turn your Grok Bot into a seven-agent Strike Finance trading desk: research, risk, execution and review, with market data from Strike's public Price Service and execution through the crowdtime MCP.",
   "version": "1.0.0",
   "author": {
-    "name": "mendurim",
-    "url": "https://github.com/mendurim/strikegrok-trading-desk"
+    "name": "Mendurim",
+    "url": "https://github.com/Mendurim/strikegrok-trading-desk"
   },
-  "homepage": "https://github.com/mendurim/strikegrok-trading-desk",
-  "repository": "https://github.com/mendurim/strikegrok-trading-desk",
+  "homepage": "https://github.com/Mendurim/strikegrok-trading-desk",
+  "repository": "https://github.com/Mendurim/strikegrok-trading-desk",
   "license": "MIT",
   "keywords": ["strike-finance", "cardano", "perpetuals", "trading-desk", "agents", "grok-bot", "mcp"]
 }

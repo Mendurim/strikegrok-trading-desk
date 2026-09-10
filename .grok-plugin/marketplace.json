@@ -1,7 +1,7 @@
 {
   "name": "strikegrok",
   "owner": {
-    "name": "mendurim",
+    "name": "Mendurim",
     "email": "mendurim@users.noreply.github.com"
   },
   "metadata": {
@@ -15,10 +15,10 @@
       "description": "Turn your agent into a 7-role Strike Finance trading desk: research, risk, execution and review.",
       "version": "1.0.0",
       "author": {
-        "name": "mendurim"
+        "name": "Mendurim"
       },
-      "homepage": "https://github.com/mendurim/strikegrok-trading-desk",
-      "repository": "https://github.com/mendurim/strikegrok-trading-desk",
+      "homepage": "https://github.com/Mendurim/strikegrok-trading-desk",
+      "repository": "https://github.com/Mendurim/strikegrok-trading-desk",
       "license": "MIT",
       "keywords": ["strike-finance", "cardano", "perpetuals", "trading-desk", "agents", "grok-bot", "mcp"]
     }
