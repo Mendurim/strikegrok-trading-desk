@@ -8,7 +8,7 @@ If your runtime loaded this repository as a plugin, invoke `strikegrok-bootstrap
 
 ```bash
 mkdir -p /workspace && cd /workspace
-git clone --depth 1 --branch v2.0.0 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
+git clone --depth 1 --branch v3.0.0 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
 cd /workspace/strikegrok && git rev-parse HEAD && bash scripts/check.sh
 ```
 
@@ -76,12 +76,13 @@ For each directory under `skills/`, read `SKILL.md` and compare its `name` and i
 When copying a skill into another workspace or distributing the desk, retain its `LICENSE` and `ATTRIBUTION.md` beside the instructions. If the destination only accepts a single instruction field, keep the complete license notice in its accompanying project documentation or third-party notices. See [reuse and attribution](ATTRIBUTION.md); stars and public credit links are optional.
 
 
-Skills to install (19):
+Skills to install (21):
 
 - Bootstrap: `strikegrok-bootstrap`
 - Strike: `strike-setup`, `strike-auth`, `strike-market-data`, `strike-account`, `strike-orders`, `strike-positions`, `strike-advanced`, `strike-websocket`, `strike-api-reference`
 - Optional: `strike-research-tools` (the crowdtime MCP add-on; the desk trades fully without it)
 - Desk: `desk-operating-model`, `desk-trade-lifecycle`, `desk-risk-limits`, `desk-execution-protocol`, `desk-monitoring`, `desk-post-trade-review`, `desk-incident-response`, `desk-strategy-lab`
+- Autonomy: `desk-signal-scan`, `desk-standing-approvals` (install both or neither; the scan produces signals the standing approvals are the control for)
 
 Tell each Bot which skills are its own (listed in its agent file's frontmatter). Any Bot may read any skill; the Execution Trader is the one Bot that acts on the write paths in `strike-orders`, `strike-positions` and `strike-advanced`.
 

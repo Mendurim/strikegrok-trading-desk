@@ -3,7 +3,7 @@ name: strike-research-tools
 description: The optional crowdtime MCP research add-on - how to reach it, and its market liquidity screen, computed technical indicators, crypto and equity news research, dividend research, Bodega prediction markets and Discord alerts. None of it is required: the desk trades entirely without it. Use for catalyst work on Strike's crypto and equity markets, for a liquidity screen before analysing a market, and for pushing alerts outside the chat.
 license: MIT
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
   author: Mendurim
   category: strike
   network-default: mainnet

@@ -12,6 +12,9 @@ import hashlib
 import io
 import os
 import sys
+import importlib
+import json
+import tempfile
 import unittest
 from contextlib import redirect_stderr
 
@@ -109,6 +112,117 @@ class CliTest(unittest.TestCase):
     def test_testnet_and_mainnet_are_different_hosts(self):
         self.assertIn("testnet", sr.TESTNET)
         self.assertNotIn("testnet", sr.MAINNET)
+
+
+class TheGateRunsBeforeTheSigner(unittest.TestCase):
+    """A refused request must never reach the network or the signing key.
+
+    `_send` is the only thing that touches either, so replacing it with a
+    tripwire proves the refusal happened first.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        os.environ["STRIKEGROK_DESK"] = self._tmp.name
+        self.addCleanup(lambda: os.environ.pop("STRIKEGROK_DESK", None))
+        importlib.reload(sr.desk_policy) if hasattr(sr, "desk_policy") else None
+        import desk_policy
+        importlib.reload(desk_policy)
+        sr.Policy, sr.PolicyRefusal = desk_policy.Policy, desk_policy.PolicyRefusal
+
+        self.sent = []
+        original = sr._send
+        self.addCleanup(lambda: setattr(sr, "_send", original))
+
+        def stub(base_url, method, path, body, query, timeout):
+            # The policy performs real signed reads of its own, so the stub has to
+            # answer them plausibly or every refusal is "no equity field".
+            self.sent.append((base_url, method, path, body, query, timeout))
+            if path == "/v2/account":
+                return 200, json.dumps({"equity": 10000.0})
+            if path in ("/v2/positions", "/v2/closedPositions"):
+                return 200, "[]"
+            return 200, "{}"
+
+        sr._send = stub
+        # The daily stop refuses rather than re-basing, so the trading day has to
+        # be opened by a read before anything can be sent - exactly as on a desk.
+        sr.request("https://example.invalid", "GET", "/v2/account", "", [], 1.0)
+        self.sent.clear()
+
+    def writes(self):
+        """The policy performs its own signed GETs - the account read behind the
+        daily-loss stop, the positions read behind the book ceiling - so the
+        invariant is not that nothing was sent. It is that no WRITE was."""
+        return [call for call in self.sent if call[1].upper() != "GET"]
+
+    def refuse(self, method, path, body=""):
+        with self.assertRaises(sr.PolicyRefusal) as caught:
+            sr.request("https://example.invalid", method, path, body, [], 1.0)
+        self.assertEqual(self.writes(), [], "a refused write reached the signer")
+        return str(caught.exception)
+
+    def test_a_withdrawal_never_reaches_the_signer(self):
+        self.assertIn("outside the desk's scope", self.refuse("POST", "/v2/withdraw", '{"amount":"1"}'))
+
+    def test_an_order_with_no_proposal_never_reaches_the_signer(self):
+        body = '{"symbol":"ETH-USD","side":"sell","size":"1","price":"2431","client_order_id":"SG-20260912-03-e"}'
+        self.assertIn("is missing", self.refuse("POST", "/v2/order", body))
+
+    def test_an_order_with_no_ticket_id_never_reaches_the_signer(self):
+        self.assertIn("does not carry an SG-", self.refuse("POST", "/v2/order", '{"symbol":"ETH-USD"}'))
+
+    def test_a_malformed_body_never_reaches_the_signer(self):
+        self.assertIn("not valid JSON", self.refuse("POST", "/v2/order", "{not json"))
+
+    def test_a_get_passes_straight_through(self):
+        sr.request("https://example.invalid", "GET", "/v2/openOrders", "", [], 1.0)
+        # The read itself, plus the one account read that opens the trading day.
+        self.assertIn(("GET", "/v2/openOrders"), [(c[1], c[2]) for c in self.sent])
+        self.assertEqual(self.writes(), [])
+
+    def test_the_day_is_opened_only_once(self):
+        for _ in range(3):
+            sr.request("https://example.invalid", "GET", "/v2/openOrders", "", [], 1.0)
+        account_reads = [c for c in self.sent if c[2] == "/v2/account"]
+        self.assertEqual(account_reads, [], "the day was already opened; do not re-read per call")
+
+    def test_a_send_that_never_left_gives_the_reservation_back(self):
+        """A refused connection proves the venue saw nothing, so the ticket may be
+        retried. A timeout must not take this path."""
+        import socket
+        import urllib.error
+        self.assertTrue(sr._never_left(urllib.error.URLError(ConnectionRefusedError())))
+        self.assertFalse(sr._never_left(urllib.error.URLError(socket.timeout())))
+        self.assertFalse(sr._never_left(socket.timeout()))
+
+    def test_a_read_captures_the_days_opening_equity(self):
+        sod = os.path.join(self._tmp.name, "desk", "policy-state", "sod_equity.json")
+        self.assertTrue(os.path.exists(sod), "a read should have opened the trading day")
+        self.assertEqual(json.loads(open(sod).read())["equity"], 10000.0)
+
+    def test_the_policys_own_reads_are_gets_not_writes(self):
+        body = '{"symbol":"ETH-USD","side":"sell","size":"1","price":"2431","client_order_id":"SG-20260912-03-e"}'
+        self.refuse("POST", "/v2/order", body)
+        self.assertTrue(self.sent, "the policy should have read the account before refusing")
+        self.assertTrue(all(call[1].upper() == "GET" for call in self.sent))
+
+    def test_a_reduce_only_order_passes(self):
+        body = '{"symbol":"ETH-USD","side":"buy","size":"1","reduce_only":true}'
+        with redirect_stderr(io.StringIO()):
+            sr.request("https://example.invalid", "POST", "/v2/order", body, [], 1.0)
+        self.assertEqual(len(self.writes()), 1)
+
+    def test_the_cli_reports_a_refusal_as_exit_code_three(self):
+        path = os.path.join(self._tmp.name, "body.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write('{"amount":"1"}')
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = sr.main(["POST", "/v2/withdraw", "--body-file", path])
+        self.assertEqual(code, 3)
+        self.assertIn("POLICY REFUSED", err.getvalue())
 
 
 if __name__ == "__main__":

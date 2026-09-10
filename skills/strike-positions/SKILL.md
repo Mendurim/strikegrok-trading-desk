@@ -3,7 +3,7 @@ name: strike-positions
 description: Managing Strike Finance positions through the signed REST API - leverage per symbol, cross and isolated margin mode, reading margin usage and distance to liquidation, attaching protection to an existing position, and closing with reduce-only orders. Use when setting up a market before a first trade, when a position needs protecting or closing, or when checking liquidation risk. Leverage, protection and closes write; reads are open to the Risk Manager.
 license: MIT
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
   author: Mendurim
   category: strike
   network-default: mainnet

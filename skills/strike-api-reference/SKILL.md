@@ -3,7 +3,7 @@ name: strike-api-reference
 description: Compact reference for the Strike Finance surfaces the desk uses - every public Price Service endpoint, every signed trading and account endpoint with its parameters, the API wallet signing scheme, order types, flags and time-in-force, order status codes, per-market constraints, rate limits and error strings, plus the optional crowdtime MCP research tools. Use to look up an endpoint, a field, a status code or a flag without re-reading a whole skill.
 license: MIT
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
   author: Mendurim
   category: strike
   network-default: mainnet

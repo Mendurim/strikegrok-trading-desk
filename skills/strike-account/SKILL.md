@@ -3,7 +3,7 @@ name: strike-account
 description: Reading Strike Finance account state through the signed REST API - the account object, balances, portfolio, open positions, open orders, closed positions with realised PnL, order and fill history, funding actually paid, and the transaction ledger. Use before sizing any trade, when checking whether protection exists, when reconciling a send, and when building a post-trade review. Read-only; nothing here changes anything.
 license: MIT
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
   author: Mendurim
   category: strike
   network-default: mainnet

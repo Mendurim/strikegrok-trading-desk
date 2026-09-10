@@ -34,6 +34,8 @@ Market data is the **public Price Service**; everything else is the **signed tra
 | [desk-risk-limits](desk-risk-limits/SKILL.md) | The limits file, sizing arithmetic on a stressed stop, leverage caps and notional headroom, book check, veto rules | Risk Manager |
 | [desk-execution-protocol](desk-execution-protocol/SKILL.md) | Pre-send checklist, the dry run as rehearsal, single send, unverified results, reconciliation | Execution Trader |
 | [desk-monitoring](desk-monitoring/SKILL.md) | Routines, the desk brief, watches and alert conditions | Desk Lead, Risk Manager, Market Analyst |
+| [desk-signal-scan](desk-signal-scan/SKILL.md) | The universe scan, T-minus catalyst alerts, live rule monitors, the signals file, the four clocks | Market Analyst, Research Analyst, Strategist, Desk Lead |
+| [desk-standing-approvals](desk-standing-approvals/SKILL.md) | The two modes, the three tiers, the signed register, the suspension ledger, what the policy layer checks | Desk Lead, Risk Manager, Strategist, Execution Trader |
 | [desk-post-trade-review](desk-post-trade-review/SKILL.md) | Journal format, trade review, weekly review, incident review | Trade Reviewer |
 | [desk-incident-response](desk-incident-response/SKILL.md) | Playbooks for unverified sends, mismatches, unprotected positions, outages, token compromise | Execution Trader, Risk Manager, Desk Lead |
 | [desk-strategy-lab](desk-strategy-lab/SKILL.md) | Rules first, honest backtests, sanity checks, paper trading | Strategist |
