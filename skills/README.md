@@ -1,6 +1,6 @@
 # Skills
 
-Nineteen skills in the portable `SKILL.md` format (`name` and `description` frontmatter, body under 320 lines). Grok Bot reads them from `/workspace/strikegrok/skills/<name>/SKILL.md` and saves each as a shared skill; Grok Build, Cursor and Claude Code load the directory as a plugin.
+Twenty-two skills in the portable `SKILL.md` format (`name` and `description` frontmatter, body under 320 lines). Grok Bot reads them from `/workspace/strikegrok/skills/<name>/SKILL.md` and saves each as a shared skill; Grok Build, Cursor and Claude Code load the directory as a plugin.
 
 ## Bootstrap
 
@@ -36,13 +36,14 @@ Market data is the **public Price Service**; everything else is the **signed tra
 | [desk-monitoring](desk-monitoring/SKILL.md) | Routines, the desk brief, watches and alert conditions | Desk Lead, Risk Manager, Market Analyst |
 | [desk-signal-scan](desk-signal-scan/SKILL.md) | The universe scan, T-minus catalyst alerts, live rule monitors, the signals file, the four clocks | Market Analyst, Research Analyst, Strategist, Desk Lead |
 | [desk-standing-approvals](desk-standing-approvals/SKILL.md) | The two modes, the three tiers, the signed register, the suspension ledger, what the policy layer checks | Desk Lead, Risk Manager, Strategist, Execution Trader |
+| [desk-autopilot](desk-autopilot/SKILL.md) | The runbooks on a clock: `scripts/autopilot.py`, the two-OS-user split, the rule file, the preflight, the staged rollout | Desk Lead, Strategist, Execution Trader |
 | [desk-post-trade-review](desk-post-trade-review/SKILL.md) | Journal format, trade review, weekly review, incident review | Trade Reviewer |
 | [desk-incident-response](desk-incident-response/SKILL.md) | Playbooks for unverified sends, mismatches, unprotected positions, outages, token compromise | Execution Trader, Risk Manager, Desk Lead |
 | [desk-strategy-lab](desk-strategy-lab/SKILL.md) | Rules first, honest backtests, sanity checks, paper trading | Strategist |
 
 ## Conventions
 
-Each skill's `metadata.version` is that skill's own, not the release tag. A skill at `1.0.1` inside release `v3.0.2` has simply not needed changing; the release the desk was built from is the tag the bootstrap skill clones.
+Each skill's `metadata.version` is that skill's own, not the release tag. A skill at `1.0.1` inside release `v3.1.0` has simply not needed changing; the release the desk was built from is the tag the bootstrap skill clones.
 
 - Frontmatter: `name` (matches the directory), `description` (what and when, under 1024 characters), `license`, `metadata` (`version`, `author`, `category`, and `network-default` for Strike skills).
 - Bodies: purpose, concepts, copy-pasteable commands (`curl` for public reads, `scripts/strike_request.py` for signed calls), procedure, pitfalls. No strategy content, no return claims, no emoji.

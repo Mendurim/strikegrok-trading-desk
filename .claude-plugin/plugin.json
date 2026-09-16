@@ -1,7 +1,7 @@
 {
   "name": "strikegrok",
   "description": "Turn your Grok Bot into a seven-agent Strike Finance trading desk: research, risk, execution and review, with market data from Strike's public Price Service and execution through Strike's signed API, gated by a signed standing-approval policy layer.",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "author": {
     "name": "Mendurim",
     "url": "https://github.com/Mendurim/strikegrok-trading-desk"

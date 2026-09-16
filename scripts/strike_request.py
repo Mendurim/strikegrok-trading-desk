@@ -58,7 +58,7 @@ from desk_policy import Policy, PolicyRefusal  # noqa: E402
 # The release this signer belongs to. Kept in step with plugin.json by a test,
 # because a User-Agent naming a version the desk stopped being is a support
 # question nobody can answer from the logs.
-VERSION = "3.0.2"
+VERSION = "3.1.0"
 USER_AGENT = f"strikegrok-desk/{VERSION}"
 
 MAINNET = "https://api.strikefinance.org"

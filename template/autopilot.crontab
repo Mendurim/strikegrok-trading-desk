@@ -1,0 +1,21 @@
+# The desk's clocks. Two crontabs, because the two users are the whole security
+# model: only strike-signer holds the API wallet, and only botuser runs autopilot.
+#
+# Install with `crontab -u <user> -e`. Every job writes to the desk's own logs;
+# the redirects here are a second copy for the operator.
+
+# ---------------------------------------------------------------- strike-signer
+# Opens the trading day inside policy-state and leaves equity where the Bot can
+# read it. If this stops, autopilot stops opening positions within ten minutes.
+*/5 * * * * /workspace/strikegrok/template/signer-snapshot.sh >> /var/log/strikegrok/snapshot.log 2>&1
+
+# ---------------------------------------------------------------------- botuser
+# Staggered so no two jobs hit the same endpoint in the same minute. The weight
+# budget is 2400 reads a minute; a full 31-market scan is under 150.
+#
+# The scan is also what builds the funding history the monitors rank against:
+# a rule with a 30-day percentile condition cannot fire until the scan has been
+# running for ten days. That is not a bug to work around.
+5 * * * *   /usr/bin/python3 /workspace/strikegrok/scripts/autopilot.py --network testnet scan >> /var/log/strikegrok/scan.log 2>&1
+*/5 * * * * /usr/bin/python3 /workspace/strikegrok/scripts/autopilot.py --network testnet monitor --rule /workspace/trading-desk/strategies/funding-fade-v1/rule.json >> /var/log/strikegrok/monitor.log 2>&1
+*/7 * * * * /usr/bin/python3 /workspace/strikegrok/scripts/autopilot.py --network testnet sweep >> /var/log/strikegrok/sweep.log 2>&1

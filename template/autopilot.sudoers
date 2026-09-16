@@ -1,0 +1,14 @@
+# /etc/sudoers.d/strikegrok - install with `visudo -f /etc/sudoers.d/strikegrok`
+#
+# The only door between the two users. botuser may ask strike-signer to run the
+# signer and nothing else: not a shell, not an editor, not another interpreter.
+# The signer decides for itself what it will sign, because desk_policy.py runs
+# inside it, on strike-signer's side of this line.
+#
+# NOPASSWD is deliberate - a cron job cannot answer a prompt - which is why the
+# command is pinned to one absolute path with no wildcard in it.
+botuser ALL=(strike-signer) NOPASSWD: /usr/bin/python3 /workspace/strikegrok/scripts/strike_request.py *
+
+# Keep the Bot's environment out of the signer's. The API wallet comes from
+# strike-signer's own profile, and nothing botuser sets may reach it.
+Defaults!/usr/bin/python3 env_reset
