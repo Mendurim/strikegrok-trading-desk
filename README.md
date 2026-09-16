@@ -14,7 +14,7 @@ Market data comes from Strike's **public REST Price Service**; execution goes th
 
 Open Grok Bot and paste this to any Bot:
 
-> Set up the StrikeGrok trading desk from https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.2/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.0.2/SETUP.md for the complete runbook, and finish with its evidence receipt.
+> Set up the StrikeGrok trading desk from https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.1.0/skills/strikegrok-bootstrap/SKILL.md. Follow the bootstrap skill, use https://github.com/Mendurim/strikegrok-trading-desk/blob/v3.1.0/SETUP.md for the complete runbook, and finish with its evidence receipt.
 
 The desk starts in research mode. The first demo uses only Strike's public Price Service: no key, no account read, no order. Register a Strike API wallet when you are ready to trade.
 
@@ -103,6 +103,20 @@ Every Bot on the desk shares one computer and one filesystem. So a Bot can write
 
 Standing approvals (Tier 1) go further and let a tested rule fire at 03:00 with nobody awake — but they rely on a state directory that is only a real boundary when the signer runs as its own OS user. On a shared Grok workspace it does not, so Tier 1 stays off unless you set `STRIKEGROK_STATE_TRUSTED=1` to assert otherwise. Leave it unset and trade at Tier 2 until that separation is real.
 
+## Unattended, on a computer where the split is real
+
+`scripts/autopilot.py` is the desk's two autonomy runbooks — the hourly universe scan and the live rule monitors — executed by a clock instead of a prompt. It evaluates a frozen rule on closed bars, checks the four clocks, sizes on a stressed stop, writes the proposal and its PASS block, and asks the signer for exactly one bracketed order. There is no model in the send path, so the same bars produce the same ticket twice and the ticket can be checked afterwards.
+
+```bash
+python3 scripts/autopilot.py scan                                    # hourly
+python3 scripts/autopilot.py monitor --rule strategies/r/rule.json   # at bar close
+python3 scripts/autopilot.py monitor --rule … --dry                  # rehearsal; sends nothing
+```
+
+It never holds the API wallet. Every authenticated call, reads included, goes through `sudo -u strike-signer … strike_request.py`, so the policy layer gates it exactly as it gates a person. That only means anything with two OS users — one that owns the wallet and the state directory, one that runs the Bots and can write proposals but sign nothing — which is why `desk-autopilot` and `SETUP.md` section 11 spend as much space on the split as on the script.
+
+Before it sends, autopilot predicts every refusal the gate can produce: open incidents, suspensions, the rule hash, notional and risk caps, pacing, the book, the approval's occupied markets, and the venue's own filters. A refusal that gets through anyway files an incident and is never retried, because it means the script is wrong about the gate rather than the market being wrong about the trade.
+
 ### Two things this desk is honest about
 
 **Strike has no dry-run mode.** An earlier version of this desk had one in its transport; the signed API does not. The desk replaces it with a preview block: every request is built as a file, posted to you verbatim, and that same file is sent. It is a discipline rather than a gate, so the Require Approval rule in Grok Bot matters more, not less.
@@ -113,7 +127,7 @@ Perpetual futures can liquidate an account. StrikeGrok is documentation and inst
 
 ## Also runs in Grok Build, Cursor and Claude Code
 
-The same `agents/`, `skills/` and `rules/` load as a plugin: nineteen skills, and the seven roles as subagents.
+The same `agents/`, `skills/` and `rules/` load as a plugin: twenty-two skills, and the seven roles as subagents.
 
 In Claude Code, install it from this repository:
 
@@ -137,9 +151,9 @@ Either way, run `/desk-operating-model` to begin.
 ```
 SETUP.md     what your Grok Bot follows to build the desk
 agents/      seven roles: Bot profile card + full system prompt
-skills/      nineteen skills (bootstrap, strike-*, desk-*)
-template/    exact public Grok Bot profile and skill hashes
-scripts/     zero-key Opening Bell, desk doctor and release checks
+skills/      twenty-two skills (bootstrap, strike-*, desk-*)
+template/    Grok Bot profile, skill hashes, example rule, cron and sudoers
+scripts/     the signer, the policy layer, the autopilot, Opening Bell, checks
 docs/        how it works, FAQ, provenance
 assets/      the mascot - use it as your Bots' avatar
 ```

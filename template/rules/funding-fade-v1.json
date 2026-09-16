@@ -1,0 +1,22 @@
+{
+  "name": "funding-fade-v1",
+  "version": 3,
+  "markets": ["BTC-USD", "ETH-USD", "SOL-USD"],
+  "timeframe_seconds": 14400,
+  "klines_interval": "4h",
+  "condition": {
+    "funding_pct30d": [95, 100],
+    "price_vs_sma20": "above"
+  },
+  "direction": "fade",
+  "entry": "market",
+  "stop_atr_multiple": 1.5,
+  "take_profit_atr_multiple": 3.0,
+  "slippage_bps": 10,
+  "fee_bps_round_turn": 10,
+  "max_spread_bps": 10,
+  "funding_position": "pays",
+  "sl_order_type": "stop_market",
+  "tp_order_type": "take_profit_market",
+  "notes": "An EXAMPLE, not a recommendation. It has no backtest behind it in this repository and no desk should run it until its own RULES.md, backtest and forward test exist. Fade funding at or above the 95th percentile of its own 30 days while price is above SMA20: short, stop 1.5x ATR20, target 3x ATR20, both legs market-on-trigger."
+}

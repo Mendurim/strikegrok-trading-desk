@@ -1,9 +1,9 @@
 ---
 name: strikegrok-bootstrap
-description: Build and verify a StrikeGrok trading desk from the pinned public release. Use for first-run setup, repair, or a readiness check. Starts with a live zero-key Opening Bell on Strike's public Price Service, installs the seven role profiles and nineteen shared skills, prepares the Trading Floor, provisions the Strike API wallet only when the user asks to trade, and returns an evidence receipt. Read-only by default; never requests a key or places an order.
+description: Build and verify a StrikeGrok trading desk from the pinned public release. Use for first-run setup, repair, or a readiness check. Starts with a live zero-key Opening Bell on Strike's public Price Service, installs the seven role profiles and twenty-two shared skills, prepares the Trading Floor, provisions the Strike API wallet only when the user asks to trade, and returns an evidence receipt. Read-only by default; never requests a key or places an order.
 license: MIT
 metadata:
-  version: "3.0.2"
+  version: "3.1.0"
   author: Mendurim
   category: desk
 ---
@@ -29,7 +29,7 @@ If `/workspace/strikegrok` is already a Git checkout, read its `plugin.json` and
 
 ```bash
 mkdir -p /workspace && cd /workspace
-git clone --depth 1 --branch v3.0.2 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
+git clone --depth 1 --branch v3.1.0 https://github.com/Mendurim/strikegrok-trading-desk.git strikegrok
 cd /workspace/strikegrok
 git rev-parse HEAD
 bash scripts/check.sh
@@ -85,14 +85,16 @@ Skills are shared across all the user's Bots, and a Desk Lead added from the pub
 
 For each directory under `skills/`, compare `name` and instructions with the shared skill when one exists. Matching: enabled, recorded `template`. Missing: saved unchanged, recorded `installed`. Too long to save: save a pointer skill - "When this skill is used, read `/workspace/strikegrok/skills/<name>/SKILL.md` and follow it" - recorded `pointer`. A same-name skill with different instructions that cannot be replaced is a `mismatch` and fails readiness.
 
-The receipt lists **exactly nineteen unique skill names** and one status each. A name alone is not proof its content is current.
+The receipt lists **exactly twenty-two unique skill names** and one status each. A name alone is not proof its content is current.
 
-Nineteen skills:
+Twenty-two skills:
 
 - Bootstrap: `strikegrok-bootstrap`
 - Strike: `strike-setup`, `strike-auth`, `strike-market-data`, `strike-account`, `strike-orders`, `strike-positions`, `strike-advanced`, `strike-websocket`, `strike-api-reference`
 - Optional: `strike-research-tools` (the crowdtime MCP add-on; the desk trades fully without it)
 - Desk: `desk-operating-model`, `desk-trade-lifecycle`, `desk-risk-limits`, `desk-execution-protocol`, `desk-monitoring`, `desk-post-trade-review`, `desk-incident-response`, `desk-strategy-lab`
+- Autonomy: `desk-signal-scan`, `desk-standing-approvals`
+- Unattended: `desk-autopilot` (the runbooks on a clock; needs the two-OS-user split in SETUP.md section 11)
 
 Tell each Bot which skills are its own, from its agent file's frontmatter. Any Bot may read any skill; the Execution Trader is the one Bot that acts on the write paths in `strike-orders` and `strike-positions`.
 

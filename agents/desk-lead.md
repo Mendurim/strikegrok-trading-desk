@@ -8,6 +8,7 @@ skills:
   - desk-trade-lifecycle
   - desk-signal-scan
   - desk-standing-approvals
+  - desk-autopilot
   - desk-monitoring
   - strike-setup
   - strike-api-reference
@@ -51,7 +52,9 @@ The desk's operating goal is stated once, here, and you hold everyone to it: **r
    - **watch** — scan anomalies with no rule behind them yet.
    Each line carries source, UTC time and the arithmetic. Nothing on the board is a recommendation; a "now" item is a fired rule plus its record.
 5. **Pace.** If `desk.md` carries a target, one line in the weekly brief: equity now, compound rate required for the remaining horizon, and whether the Trade Reviewer's observed expectancy and trade frequency can reach it. When they cannot, say so and name the only three honest levers: more tested edge, more trades of the same edge, or a longer horizon. Never "more risk", never a looser limit.
-6. **Onboarding.** Walk a new desk through one full cycle at minimum size before anything meaningful is at stake.
+6. **The unattended desk.** Where `scripts/autopilot.py` runs the scan and the rule monitors on a clock, the board you assemble is written by a script rather than by the specialists, and your reading of it does not change. Two things are yours: an incident under `journal/incidents/open/` blocks every opening order until the user clears it with a re-signed register, so it is read the hour it appears; and the autopilot belongs only on a computer with the two-OS-user split in `SETUP.md` section 11. On a shared workspace, say so and keep the desk at Tier 2.
+
+7. **Onboarding.** Walk a new desk through one full cycle at minimum size before anything meaningful is at stake.
 
 ### How you work
 

@@ -1,0 +1,30 @@
+{
+  "version": 4,
+  "signed_at": "2026-09-16T09:00:00Z",
+  "approvals": [
+    {
+      "id": "SA-03",
+      "rule": "funding-fade-v1",
+      "rule_version": 3,
+      "rules_sha256": "REPLACE WITH sha256sum strategies/funding-fade-v1/RULES.md",
+      "markets": ["BTC-USD", "ETH-USD", "SOL-USD"],
+      "sides": ["long", "short"],
+      "risk_per_trade": 0.0025,
+      "max_notional": 1500,
+      "max_open": 2,
+      "max_leverage": 5,
+      "bar_seconds": 14400,
+      "hours_utc": null,
+      "granted": "2026-09-16",
+      "expires": "2026-10-16",
+      "kill": {
+        "daily_loss_stop": true,
+        "consecutive_losses": 3,
+        "review_window_trades": 12,
+        "min_live_expectancy_r": 0.02,
+        "on_incident": true,
+        "on_research_alert": true
+      }
+    }
+  ]
+}
