@@ -1606,6 +1606,11 @@ def cmd_monitor(args) -> int:
         print(f"none of {args.market} is in {rule.signal}", file=sys.stderr)
         return 1
 
+    # Every market's verdict, so a run that sends nothing can still say why.
+    # A cron line reports the exit code and whatever reached stderr; without
+    # this, a blind or not-fired run is a bare `exit 2` and the reason lives
+    # only in the rule log on the desk computer.
+    outcomes: list[tuple[str, str, str]] = []
     fires, worst = [], 0
     for symbol in markets:
         try:
@@ -1619,6 +1624,7 @@ def cmd_monitor(args) -> int:
             count = int((state["blind"].get(key) or {}).get("count", 0)) + 1
             state["blind"][key] = {"count": count, "at": iso(now()), "why": str(exc)}
             desk.watch_log(rule.name, f"{rule.signal} {symbol:10} could_not_tell  {exc}")
+            outcomes.append((symbol, "could_not_tell", str(exc)))
             desk.signal(f"WATCH COULD NOT TELL | {iso(now())} | {rule.signal} | {symbol} | {exc}\n"
                         f"  next: @Strategist (consecutive {count})")
             if count >= BLIND_BARS_BEFORE_SUSPEND:
@@ -1634,6 +1640,7 @@ def cmd_monitor(args) -> int:
         detail = " ".join(f"{k}={short(v)}" for k, v in reading.items()
                           if k not in ("fired", "bar_close_at"))
         verdict = "fired" if reading["fired"] else "not_fired"
+        outcomes.append((symbol, verdict, detail))
         desk.watch_log(rule.name, f"{rule.signal} {symbol:10} {verdict:10} bar "
                                   f"{iso(reading['bar_close_at'])} {detail}")
         if reading["fired"]:
@@ -1665,6 +1672,7 @@ def cmd_monitor(args) -> int:
             # refusing: nothing was sent, and the bar is retried while it is fresh.
             state["fired"][key] = {"at": iso(now()), "state": "held", "why": str(exc)}
             desk.watch_log(rule.name, f"{rule.signal} {symbol:10} held       {exc}")
+            outcomes.append((symbol, "held", str(exc)))
             desk.journal(f"{iso(now())} HELD {rule.signal} {symbol} - {exc}")
             desk.signal(f"RULE FIRED | {iso(now())} | {rule.signal} | {symbol} | held\n"
                         f"  held: {exc}\n  next: @Desk Lead (no ticket raised)")
@@ -1695,6 +1703,17 @@ def cmd_monitor(args) -> int:
 
     state["fired"] = prune(state["fired"])
     desk.save_state(state)
+
+    if not sent_this_run:
+        # Nothing reached stdout, so say on stderr what the run decided and why.
+        tally: dict[str, int] = {}
+        for _, verdict, _why in outcomes:
+            tally[verdict] = tally.get(verdict, 0) + 1
+        summary = ", ".join(f"{n} {v}" for v, n in sorted(tally.items())) or "no markets evaluated"
+        print(f"{rule.signal}: {summary} (exit {worst})", file=sys.stderr)
+        for symbol, verdict, why in outcomes:
+            if verdict in ("could_not_tell", "held"):
+                print(f"  {symbol:10} {verdict:14} {why}", file=sys.stderr)
     return worst
 
 

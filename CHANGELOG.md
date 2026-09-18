@@ -2,6 +2,17 @@
 
 All notable changes to StrikeGrok are recorded here. Versions follow the release tags the bootstrap skill pins.
 
+## v3.1.1
+
+Two things a first real run of v3.1.0 turned up.
+
+- **`monitor` exited 2 in silence.** When every market came back `could_not_tell`, the run returned the blind code and printed nothing to either stream - the reason reached only `watch/rule-<name>/log` on the desk computer. From cron that is a bare exit 2 in the mail with nothing to act on. It now prints a one-line tally and a line per blind or held market to stderr, and still writes the log. Nothing about the decision changed; it says what it decided.
+- **`scripts/funding_collect.py`** (new). A rule ranking `funding_pct30d` needs 240 hourly samples before it can fire, and the only way to get them is to observe them. The collector reads `/v2/premiumIndex`, appends to the same `data/funding/<symbol>.csv` the scan writes, keeps **one sample per funding interval** so a tighter cron cannot inflate the count, and `--status` reports progress against the rule's own threshold and when it becomes measurable. 19 tests.
+
+**There is no backfill, and there should not be one.** Strike publishes no historical funding: `/v2/klines` carries `last`, `mark` and `index` and no premium series, no `fundingRate` history endpoint exists, and `/v2/history/funding` is one account's own charges. Reconstructing it from the premium was measured and rejected - the published rate does not follow from the instantaneous premium, and the `averagePremiumIndex` behind it is accumulated inside the interval and never exposed historically. Binance's formula applied to Strike's own numbers misses the published rate by orders of magnitude. A reconstructed series would corrupt the percentile a rule ranks against, invisibly, which is the failure `desk-strategy-lab` exists to prevent.
+
+One thing this found and did not fix: **`autopilot.py scan` does not deduplicate by funding interval.** Run hourly that is correct; run every five minutes it writes twelve samples an hour, and a "30-day" window becomes two and a half days without saying so. The collector guards against this for the series it owns, and `desk-autopilot` now says to keep the scan hourly.
+
 ## v3.1.0
 
 The desk's two autonomy runbooks are now executable. `desk-signal-scan` and `desk-standing-approvals` described an hourly scan, live rule monitors, four clocks and a Tier 1 send at 03:00 with nobody awake - and left all of it to a Bot to perform. A Bot deciding at 03:00 whether a rule fired is a Bot writing its own evidence. `scripts/autopilot.py` performs the same runbooks deterministically: it evaluates a frozen rule on closed bars, checks the four clocks, sizes on a stressed stop, writes the proposal and its `RISK | … | PASS` block, and asks the signer for exactly one bracketed order.

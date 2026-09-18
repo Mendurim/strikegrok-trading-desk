@@ -31,6 +31,7 @@ REPO_FILES = (
     "scripts/desk_doctor.py",
     "scripts/opening_bell.py",
     "scripts/strike_request.py",
+    "scripts/funding_collect.py",
     "skills/strikegrok-bootstrap/SKILL.md",
 )
 

@@ -69,6 +69,17 @@ A rule is a JSON file next to its `RULES.md`, and the register is signed against
 
 **The percentile needs history.** `funding_pct30d` ranks the current rate inside `data/funding/<symbol>.csv`, which the hourly scan appends to. A rule with a 30-day percentile cannot fire until the scan has been running for ten days (240 samples, `min_funding_samples`). That is not a bug to route around: it is the rule's own condition being measurable.
 
+**There is no backfill, and there cannot be an honest one.** Strike publishes no historical funding series: `/v2/klines` offers `last`, `mark` and `index` and no premium, there is no `fundingRate` history endpoint, and the account-scoped `/v2/history/funding` is one account's charges on markets it happened to hold. Funding cannot be reconstructed from the premium either - the published rate does not follow from the instantaneous premium, and the `averagePremiumIndex` that drives it is accumulated inside the interval and never exposed historically. A reconstructed series would be a guess in the shape of an observation, and the percentile would be wrong without anyone being able to see that it was.
+
+So the history is collected, not recovered:
+
+```bash
+python3 scripts/funding_collect.py --desk /workspace/trading-desk --rule rules/R.json
+python3 scripts/funding_collect.py --desk /workspace/trading-desk --rule rules/R.json --status
+```
+
+`--status` reports samples against the threshold and when the rule becomes measurable. The collector keeps **one sample per funding interval**, so running it more often than hourly cannot inflate the count. `autopilot.py scan` does not deduplicate that way - it appends a sample per run - so a scan on a tighter-than-hourly schedule will fill the window with less than the days it claims. Run the scan hourly, or let the collector own the funding series.
+
 ## The four clocks, in code
 
 An item is actionable only when all four pass, and the ticket carries all four readings.
