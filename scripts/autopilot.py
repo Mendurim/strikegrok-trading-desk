@@ -90,6 +90,7 @@ CATALYST_CLEARANCE_SECONDS = 3600   # no calendar entry on this market inside th
 PACE_SECONDS = 90             # above the policy's 60s floor, so pacing is never the refusal
 EQUITY_MAX_AGE_SECONDS = 600  # a snapshot older than this cannot size anything
 SIGNAL_AGE_CEILING = 3600     # mirrors desk_policy.CEILING_MAX_SIGNAL_AGE_SECONDS
+HISTORY_SLOT_SECONDS = 3600   # one sample per hour in the series a window statistic reads
 BLIND_BARS_BEFORE_SUSPEND = 2 # a monitor that cannot see for two bars is not a monitor
 REQUEST_SPACING_SECONDS = 0.05  # 2400 reads/minute is the budget; a scan is nowhere near it
 
@@ -547,8 +548,32 @@ class Desk:
         except OSError as exc:
             raise Blind(f"history: {path} is unreadable ({exc})")
 
-    def append_history(self, kind: str, symbol: str, row: dict) -> None:
+    def append_history(self, kind: str, symbol: str, row: dict,
+                       min_interval: int | None = None) -> bool:
+        """Append one sample. With `min_interval`, at most one per slot.
+
+        A window statistic reads its sample count as a span of time: the rule's
+        `funding_pct30d` wants 240 hourly samples for thirty days, and the depth
+        check takes a seven-day median. Running the scan more often than the
+        series was designed for does not make either sharper - it fills the
+        window with less time and says nothing about having done so. A scan
+        every five minutes would give the 30-day percentile two and a half days
+        of history under a thirty-day name.
+
+        So the cadence is a property of the series, not of the cron line.
+        Returns False when the slot was already sampled and nothing was written.
+        """
         path = self.data_dir / kind / f"{symbol}.csv"
+        if min_interval:
+            rows = self.history(kind, symbol)
+            if rows:
+                try:
+                    last = parse_iso(rows[-1]["at"], f"{kind} history at")
+                    this = parse_iso(row["at"], f"{kind} sample at")
+                except Blind:
+                    last = this = None
+                if last and this and slot_of(last, min_interval) >= slot_of(this, min_interval):
+                    return False
         path.parent.mkdir(parents=True, exist_ok=True)
         new = not path.exists()
         with path.open("a", newline="", encoding="utf-8") as handle:
@@ -556,6 +581,12 @@ class Desk:
             if new:
                 writer.writeheader()
             writer.writerow(row)
+        return True
+
+
+def slot_of(moment: dt.datetime, interval: int = HISTORY_SLOT_SECONDS) -> int:
+    """The sampling slot a reading falls in: the next boundary after it."""
+    return int(moment.timestamp()) // interval + 1
 
 
 def recent(rows: list[dict], field: str, days: float, at: dt.datetime) -> list[Decimal]:
@@ -1733,7 +1764,8 @@ def scan_market(desk: Desk, base: str, symbol: str, at: dt.datetime) -> dict:
     rank = percentile_rank(history, premium["funding"]) if len(history) >= 24 else None
     desk.append_history("funding", symbol,
                         {"at": iso(at), "rate": plain(premium["funding"]),
-                         "mark": plain(premium["mark"])})
+                         "mark": plain(premium["mark"])},
+                        min_interval=HISTORY_SLOT_SECONDS)
 
     oi_rows = desk.history("oi", symbol)
     desk.append_history("oi", symbol, {"at": iso(at), "oi_base": plain(interest),
@@ -1779,7 +1811,8 @@ def scan_depth(desk: Desk, base: str, symbol: str, at: dt.datetime) -> Optional[
     history = recent(desk.history("depth", symbol), "bid_10bps_usd", 7, at)
     desk.append_history("depth", symbol, {
         "at": iso(at), "bid_10bps_usd": plain(depth_usd.quantize(Decimal("0.01"))),
-        "spread_bps": plain(book_now["spread_bps"].quantize(Decimal("0.01")))})
+        "spread_bps": plain(book_now["spread_bps"].quantize(Decimal("0.01")))},
+        min_interval=HISTORY_SLOT_SECONDS)
     if len(history) < 24:
         return None
     middle = median(history)

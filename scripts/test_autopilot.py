@@ -822,6 +822,74 @@ class TestEquity(unittest.TestCase):
         self.assertEqual(source, "account read")
 
 
+class TestHistoryCadence(unittest.TestCase):
+    """A window statistic reads its sample count as a span of time.
+
+    `funding_pct30d` wants 240 hourly samples for thirty days and the depth
+    check takes a seven-day median. A scan on a five-minute cron would fill
+    either window with a fraction of the time it claims, and say nothing about
+    having done so - so the cadence belongs to the series, not the cron line.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.desk = autopilot.Desk(Path(self._tmp.name))
+
+    def rows(self, kind="funding", symbol="BTC-USD"):
+        return self.desk.history(kind, symbol)
+
+    def sample(self, at, rate="0.00001"):
+        return {"at": autopilot.iso(at), "rate": rate, "mark": "80000"}
+
+    def test_the_slot_is_the_next_boundary_after_a_reading(self):
+        first = dt.datetime(2026, 9, 18, 14, 1, tzinfo=dt.timezone.utc)
+        last = dt.datetime(2026, 9, 18, 14, 59, tzinfo=dt.timezone.utc)
+        self.assertEqual(autopilot.slot_of(first), autopilot.slot_of(last))
+        self.assertNotEqual(autopilot.slot_of(last),
+                            autopilot.slot_of(last + dt.timedelta(minutes=2)))
+
+    def test_without_an_interval_every_sample_is_kept(self):
+        at = dt.datetime(2026, 9, 18, 14, 0, tzinfo=dt.timezone.utc)
+        for minute in range(3):
+            self.desk.append_history("oi", "BTC-USD",
+                                     {"at": autopilot.iso(at + dt.timedelta(minutes=minute)),
+                                      "oi_base": "1", "mark": "80000"})
+        self.assertEqual(len(self.rows("oi")), 3)
+
+    def test_a_second_sample_in_the_same_hour_is_refused(self):
+        at = dt.datetime(2026, 9, 18, 14, 2, tzinfo=dt.timezone.utc)
+        self.assertTrue(self.desk.append_history(
+            "funding", "BTC-USD", self.sample(at), min_interval=3600))
+        self.assertFalse(self.desk.append_history(
+            "funding", "BTC-USD", self.sample(at + dt.timedelta(minutes=5)), min_interval=3600))
+        self.assertEqual(len(self.rows()), 1)
+
+    def test_the_next_hour_is_accepted(self):
+        at = dt.datetime(2026, 9, 18, 14, 2, tzinfo=dt.timezone.utc)
+        self.desk.append_history("funding", "BTC-USD", self.sample(at), min_interval=3600)
+        self.assertTrue(self.desk.append_history(
+            "funding", "BTC-USD", self.sample(at + dt.timedelta(hours=1)), min_interval=3600))
+        self.assertEqual(len(self.rows()), 2)
+
+    def test_twelve_runs_an_hour_leave_one_sample_an_hour(self):
+        start = dt.datetime(2026, 9, 18, 14, 0, tzinfo=dt.timezone.utc)
+        for step in range(36):                      # three hours, every five minutes
+            self.desk.append_history("funding", "BTC-USD",
+                                     self.sample(start + dt.timedelta(minutes=5 * step)),
+                                     min_interval=3600)
+        self.assertEqual(len(self.rows()), 3)
+
+    def test_an_unparseable_last_row_does_not_block_collection(self):
+        # A corrupt stamp must not silently stop the series growing.
+        path = self.desk.data_dir / "funding" / "BTC-USD.csv"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("at,rate,mark\nnot-a-date,0.1,1\n", encoding="utf-8")
+        at = dt.datetime(2026, 9, 18, 14, 2, tzinfo=dt.timezone.utc)
+        self.assertTrue(self.desk.append_history(
+            "funding", "BTC-USD", self.sample(at), min_interval=3600))
+
+
 class TestTicketsAndState(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()

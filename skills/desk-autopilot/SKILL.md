@@ -78,7 +78,7 @@ python3 scripts/funding_collect.py --desk /workspace/trading-desk --rule rules/R
 python3 scripts/funding_collect.py --desk /workspace/trading-desk --rule rules/R.json --status
 ```
 
-`--status` reports samples against the threshold and when the rule becomes measurable. The collector keeps **one sample per funding interval**, so running it more often than hourly cannot inflate the count. `autopilot.py scan` does not deduplicate that way - it appends a sample per run - so a scan on a tighter-than-hourly schedule will fill the window with less than the days it claims. Run the scan hourly, or let the collector own the funding series.
+`--status` reports samples against the threshold and when the rule becomes measurable. The collector keeps **one sample per funding interval**, so running it more often than hourly cannot inflate the count. `autopilot.py scan` holds the same cadence for the two series a window statistic reads - funding and depth - so a scan on a tighter cron no longer shortens a thirty-day percentile or a seven-day median without saying so. Open interest is unaffected: that check looks for a row twenty-two to twenty-six hours old rather than counting samples, so a finer series only sharpens it.
 
 ## The four clocks, in code
 

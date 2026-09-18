@@ -2,6 +2,16 @@
 
 All notable changes to StrikeGrok are recorded here. Versions follow the release tags the bootstrap skill pins.
 
+## v3.1.2
+
+The scan's sampling cadence stops depending on the cron line.
+
+`autopilot.py scan` appended a funding and a depth sample on every run. Run hourly that is correct. Run every five minutes - which anyone might, to catch an opportunity sooner - it wrote twelve samples an hour, and a rule's `funding_pct30d` then ranked against two and a half days of history under a thirty-day name. The depth check's seven-day median had the same problem. Neither said anything about it; the sample count was met, so the statistic simply described a shorter window than it claimed.
+
+`Desk.append_history` now takes an optional `min_interval` and keeps at most one sample per slot, and the funding and depth call sites pass the hourly one. Open interest deliberately does not: that check looks for a row twenty-two to twenty-six hours old rather than counting samples, so a finer series only sharpens it. Six tests pin the behaviour, including thirty-six five-minute runs across three hours leaving three samples.
+
+This is the defect v3.1.1 reported and did not fix.
+
 ## v3.1.1
 
 Two things a first real run of v3.1.0 turned up.
